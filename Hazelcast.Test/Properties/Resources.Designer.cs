@@ -22,7 +22,7 @@ namespace Hazelcast.Test {
     [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Resources.Tools.StronglyTypedResourceBuilder", "15.0.0.0")]
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
     [global::System.Runtime.CompilerServices.CompilerGeneratedAttribute()]
-    internal class Resources {
+    public class Resources {
         
         private static global::System.Resources.ResourceManager resourceMan;
         
@@ -36,7 +36,7 @@ namespace Hazelcast.Test {
         ///   Returns the cached ResourceManager instance used by this class.
         /// </summary>
         [global::System.ComponentModel.EditorBrowsableAttribute(global::System.ComponentModel.EditorBrowsableState.Advanced)]
-        internal static global::System.Resources.ResourceManager ResourceManager {
+        public static global::System.Resources.ResourceManager ResourceManager {
             get {
                 if (object.ReferenceEquals(resourceMan, null)) {
                     global::System.Resources.ResourceManager temp = new global::System.Resources.ResourceManager("Properties.Resources", typeof(Resources).Assembly);
@@ -51,7 +51,7 @@ namespace Hazelcast.Test {
         ///   resource lookups using this strongly typed resource class.
         /// </summary>
         [global::System.ComponentModel.EditorBrowsableAttribute(global::System.ComponentModel.EditorBrowsableState.Advanced)]
-        internal static global::System.Globalization.CultureInfo Culture {
+        public static global::System.Globalization.CultureInfo Culture {
             get {
                 return resourceCulture;
             }
@@ -73,7 +73,7 @@ namespace Hazelcast.Test {
         ///    &lt;network&gt;
         ///        &lt;port auto-increment=&quot;true&quot; port-count=&quot;10 [rest of string was truncated]&quot;;.
         /// </summary>
-        internal static string hazelcast {
+        public static string hazelcast {
             get {
                 return ResourceManager.GetString("hazelcast", resourceCulture);
             }
@@ -96,7 +96,7 @@ namespace Hazelcast.Test {
         ///      &lt;address&gt;127.0.0.2&lt;/address&gt;
         ///    &lt;/cluster-m [rest of string was truncated]&quot;;.
         /// </summary>
-        internal static string hazelcast_config_full {
+        public static string hazelcast_config_full {
             get {
                 return ResourceManager.GetString("hazelcast_config_full", resourceCulture);
             }
@@ -115,7 +115,7 @@ namespace Hazelcast.Test {
         ///    &lt;network&gt;
         ///        &lt;port auto-increment=&quot;true&quot; port-count=&quot;10 [rest of string was truncated]&quot;;.
         /// </summary>
-        internal static string hazelcast_delay {
+        public static string hazelcast_delay {
             get {
                 return ResourceManager.GetString("hazelcast_delay", resourceCulture);
             }
@@ -155,7 +155,28 @@ namespace Hazelcast.Test {
         ///        &lt;port auto-increment=&quot;true&quot; port-count=&quot;100&quot;&gt;5701&lt;/port&gt;
         ///        &lt;outbound-ports&gt; [rest of string was truncated]&quot;;.
         /// </summary>
-        internal static string hazelcast_ssl {
+        public static string hazelcast_soak {
+            get {
+                return ResourceManager.GetString("hazelcast_soak", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to &lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?&gt;
+        ///&lt;!--
+        ///  ~ Copyright (c) 2008-2013, Hazelcast, Inc. All Rights Reserved.
+        ///  ~
+        ///  ~ Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+        ///  ~ you may not use this file except in compliance with the License.
+        ///  ~ You may obtain a copy of the License at
+        ///  ~
+        ///  ~ http://www.apache.org/licenses/LICENSE-2.0
+        ///  ~
+        ///  ~ Unless required by applicable law or agreed to in writing, software
+        ///  ~ distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+        ///  ~ WITHOUT WARRANTI [rest of string was truncated]&quot;;.
+        /// </summary>
+        public static string hazelcast_ssl {
             get {
                 return ResourceManager.GetString("hazelcast_ssl", resourceCulture);
             }

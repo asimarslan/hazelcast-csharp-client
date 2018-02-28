@@ -116,9 +116,9 @@ namespace Hazelcast.Client.Test
             return cluster;
         }
 
-        protected RemoteController.Client CreateRemoteController()
+        protected RemoteController.Client CreateRemoteController(string address="localhost", int port=9701)
         {
-            TTransport transport = new TSocket("localhost", 9701);
+            TTransport transport = new TSocket(address, port);
             transport.Open();
             TProtocol protocol = new TBinaryProtocol(transport);
             return new RemoteController.Client(protocol);

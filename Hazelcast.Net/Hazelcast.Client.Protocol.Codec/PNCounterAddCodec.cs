@@ -28,18 +28,22 @@ namespace Hazelcast.Client.Protocol.Codec
         private static int CalculateRequestDataSize(string name, long delta, bool getBeforeUpdate, IList<KeyValuePair<string, long>> replicaTimestamps, Address targetReplica)
         {
             var dataSize = ClientMessage.HeaderSize;
-                dataSize += ParameterUtil.CalculateDataSize(name);
-                dataSize += Bits.LongSizeInBytes;
-                dataSize += Bits.BooleanSizeInBytes;
-                dataSize += Bits.IntSizeInBytes;
-                foreach (var replicaTimestampsItem in replicaTimestamps )
-                {
+
+            dataSize += ParameterUtil.CalculateDataSize(name);
+            dataSize += Bits.LongSizeInBytes;
+            dataSize += Bits.BooleanSizeInBytes;
+            dataSize += Bits.IntSizeInBytes;
+
+            foreach (var replicaTimestampsItem in replicaTimestamps )
+            {
                 var replicaTimestampsItemKey = replicaTimestampsItem.Key;
                 var replicaTimestampsItemVal = replicaTimestampsItem.Value;
+
                 dataSize += ParameterUtil.CalculateDataSize(replicaTimestampsItemKey);
                 dataSize += ParameterUtil.CalculateDataSize(replicaTimestampsItemVal);
-                }
-                dataSize += AddressCodec.CalculateDataSize(targetReplica);
+            }
+
+            dataSize += AddressCodec.CalculateDataSize(targetReplica);
             return dataSize;
         }
 
@@ -47,21 +51,26 @@ namespace Hazelcast.Client.Protocol.Codec
         {
             var requiredDataSize = CalculateRequestDataSize(name, delta, getBeforeUpdate, replicaTimestamps, targetReplica);
             var clientMessage = ClientMessage.CreateForEncode(requiredDataSize);
+
             clientMessage.SetMessageType((int)PNCounterMessageType.PNCounterAdd);
             clientMessage.SetRetryable(false);
             clientMessage.Set(name);
             clientMessage.Set(delta);
             clientMessage.Set(getBeforeUpdate);
             clientMessage.Set(replicaTimestamps.Count);
+
             foreach (var replicaTimestampsItem in replicaTimestamps)
             {
-            var replicaTimestampsItemKey = replicaTimestampsItem.Key;
-            var replicaTimestampsItemVal = replicaTimestampsItem.Value;
-            clientMessage.Set(replicaTimestampsItemKey);
-            clientMessage.Set(replicaTimestampsItemVal);
+                var replicaTimestampsItemKey = replicaTimestampsItem.Key;
+                var replicaTimestampsItemVal = replicaTimestampsItem.Value;
+
+                clientMessage.Set(replicaTimestampsItemKey);
+                clientMessage.Set(replicaTimestampsItemVal);
             }
+
             AddressCodec.Encode(targetReplica, clientMessage);
             clientMessage.UpdateFrameLength();
+
             return clientMessage;
         }
 
@@ -76,21 +85,24 @@ namespace Hazelcast.Client.Protocol.Codec
         {
             var parameters = new ResponseParameters();
             var value = clientMessage.GetLong();
-    parameters.value = value;
+            parameters.value = value;
+
             var replicaTimestampsSize = clientMessage.GetInt();
             var replicaTimestamps = new List<KeyValuePair<string, long>>(replicaTimestampsSize);
+
             for (var replicaTimestampsIndex = 0; replicaTimestampsIndex<replicaTimestampsSize; replicaTimestampsIndex++)
             {
-            var replicaTimestampsItemKey = clientMessage.GetStringUtf8();
-            var replicaTimestampsItemVal = clientMessage.GetLong();
-        var replicaTimestampsItem = new KeyValuePair<string,long>(replicaTimestampsItemKey, replicaTimestampsItemVal);
-                    replicaTimestamps.Add(replicaTimestampsItem);
+                var replicaTimestampsItemKey = clientMessage.GetStringUtf8();
+                var replicaTimestampsItemVal = clientMessage.GetLong();
+                var replicaTimestampsItem = new KeyValuePair<string,long>(replicaTimestampsItemKey, replicaTimestampsItemVal);
+
+                replicaTimestamps.Add(replicaTimestampsItem);
             }
-    parameters.replicaTimestamps = replicaTimestamps;
+
+            parameters.replicaTimestamps = replicaTimestamps;
             var replicaCount = clientMessage.GetInt();
-    parameters.replicaCount = replicaCount;
+            parameters.replicaCount = replicaCount;
             return parameters;
         }
-
     }
 }

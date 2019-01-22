@@ -16,6 +16,9 @@ namespace Hazelcast.Core
 
         public VectorClock()
         {
+            // Default empty list
+            _timeStampList=new List<KeyValuePair<string, long>>();
+
             // Construct the dictionary only when necessary
             _timeStampDictionary = new Lazy<Dictionary<string, long>>(() =>
             {
@@ -41,7 +44,7 @@ namespace Hazelcast.Core
         internal bool IsAfter(VectorClock newVectorClock)
         {
             // There are no any timestamps yet
-            if (_timeStampList == null)
+            if (_timeStampList.Count == 0)
                 return false;
 
             // We have the same amount of timestamps in both collections so let's find which one has newer items
@@ -61,7 +64,8 @@ namespace Hazelcast.Core
                 // we have to update the local TS copy
                 if (localExists == false || localTSValue < extEntry.Value)
                     return false;
-                else if (localTSValue > extEntry.Value)
+
+                if (localTSValue > extEntry.Value)
                     anyTimestampGreater = true;
             }
 

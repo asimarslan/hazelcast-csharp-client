@@ -41,9 +41,96 @@ namespace Hazelcast.Client.Test
         }
 
         [Test]
-        public void Test()
+        public void AddAndGet_Succeeded()
         {
+            var result = _inst.AddAndGet(10);
+            Assert.AreEqual(10, result);
+        }
 
+        [Test]
+        public void DecrementAndGet_Succeeded()
+        {
+            _inst.AddAndGet(10);
+            var result = _inst.DecrementAndGet();
+
+            Assert.AreEqual(9, result);
+        }
+
+        [Test]
+        public void Get_Succeeded()
+        {
+            _inst.AddAndGet(10);
+            var result = _inst.Get();
+
+            Assert.AreEqual(10, result);
+        }
+
+        [Test]
+        public void GetAndAdd_Succeeded()
+        {
+            _inst.AddAndGet(10);
+
+            var result1 = _inst.GetAndAdd(10);
+            var result2 = _inst.Get();
+
+            Assert.AreEqual(result1+10, result2);
+        }
+
+        [Test]
+        public void GetAndDecrement_Succeeded()
+        {
+            _inst.AddAndGet(10);
+
+            var result1 = _inst.GetAndDecrement();
+            var result2 = _inst.Get();
+
+            Assert.AreEqual(result1, result2 + 1);
+        }
+
+        [Test]
+        public void GetAndIncrement_Succeeded()
+        {
+            _inst.AddAndGet(10);
+
+            var result1 = _inst.GetAndIncrement();
+            var result2 = _inst.Get();
+
+            Assert.AreEqual(result1 + 1, result2);
+        }
+
+        [Test]
+        public void GetAndSubtract_Succeeded()
+        {
+            _inst.AddAndGet(10);
+
+            var result1 = _inst.GetAndSubtract(5);
+            var result2 = _inst.Get();
+
+            Assert.AreEqual(result1, result2 + 5);
+        }
+
+        [Test]
+        public void IncrementAndGet_Succeeded()
+        {
+            _inst.AddAndGet(10);
+
+            var result1 = _inst.IncrementAndGet();
+            var result2 = _inst.Get();
+
+            Assert.AreEqual(result1, result2);
+            Assert.AreEqual(11, result2);
+        }
+
+        [Test]
+        public void SubtractAndGet_Succeeded()
+        {
+            _inst.AddAndGet(10);
+
+            var result1 = _inst.SubtractAndGet(5);
+            var result2 = _inst.Get();
+
+            Assert.AreEqual(result1, result2);
+            Assert.AreEqual(5, result2);
         }
     }
 }

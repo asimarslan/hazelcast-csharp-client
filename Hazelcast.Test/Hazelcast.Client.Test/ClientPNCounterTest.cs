@@ -12,9 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+using System;
 using System.Collections.Generic;
+using System.Net;
 using Hazelcast.Client.Proxy;
 using Hazelcast.Core;
+using Hazelcast.IO;
 using NUnit.Framework;
 
 using TimeStampIList = System.Collections.Generic.IList<System.Collections.Generic.KeyValuePair<string, long>>;
@@ -37,6 +40,12 @@ namespace Hazelcast.Client.Test
         public static void Destroy()
         {
             _inst.Destroy();
+        }
+
+        [Test]
+        public void Reset_Succeeded()
+        {
+            _inst.Reset();
         }
 
         [Test]
@@ -182,6 +191,30 @@ namespace Hazelcast.Client.Test
             };
 
             _inst.UpdateObservedReplicaTimestamps(testList);
+        }
+
+        [Test]
+        public void InvokeAdd_Succeeded()
+        {
+            var excludedAddresses=new HashSet<Address>();
+            var lastException=new Exception();
+            var targetAddress = new Address(new IPEndPoint(Address.GetAddressByName("127.0.0.0"), 1010));
+
+            _inst._invokeFn = (req) => null;
+
+            _inst.InvokeAdd(10, true, excludedAddresses, lastException, targetAddress);
+        }
+
+        [Test]
+        public void InvokeGet_Succeeded()
+        {
+            var excludedAddresses = new HashSet<Address>();
+            var lastException = new Exception();
+            var targetAddress = new Address(new IPEndPoint(Address.GetAddressByName("127.0.0.0"), 1010));
+
+            _inst._invokeFn = (req) => null;
+
+            _inst.InvokeGet(excludedAddresses, lastException, targetAddress);
         }
     }
 }

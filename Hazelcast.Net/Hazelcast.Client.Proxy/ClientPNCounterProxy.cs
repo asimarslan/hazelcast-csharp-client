@@ -37,10 +37,13 @@ namespace Hazelcast.Client.Proxy
         private AtomicReference<VectorClock> _observedClock;
         private AtomicInteger _maxConfiguredReplicaCount;
 
+        public Func<IClientMessage, IClientMessage> _invokeFn;
+
         public ClientPNCounterProxy(string serviceName, string objectId) : base(serviceName, objectId)
         {
             _observedClock = new AtomicReference<VectorClock>(new VectorClock());
             _maxConfiguredReplicaCount = new AtomicInteger();
+            _invokeFn = Invoke;
         }
 
         public void UpdateObservedReplicaTimestamps(TimeStampIList timeStamps)
@@ -86,7 +89,7 @@ namespace Hazelcast.Client.Proxy
                 return _maxConfiguredReplicaCount.Get();
 
             var request = PNCounterGetConfiguredReplicaCountCodec.EncodeRequest(GetName());
-            var response = Invoke(request);
+            var response = _invokeFn(request);
             var decodedResult = PNCounterGetConfiguredReplicaCountCodec.DecodeResponse(response);
 
             _maxConfiguredReplicaCount.Set(decodedResult.response);
@@ -103,7 +106,7 @@ namespace Hazelcast.Client.Proxy
             return replicaAddresses;
         }
 
-        private IClientMessage InvokeAdd(long delta, bool getBeforeUpdate, HashSet<Address> excludedAddresses, Exception lastException, Address targetAddress)
+        public IClientMessage InvokeAdd(long delta, bool getBeforeUpdate, HashSet<Address> excludedAddresses, Exception lastException, Address targetAddress)
         {
             if (targetAddress == null)
             {
@@ -116,7 +119,7 @@ namespace Hazelcast.Client.Proxy
             try
             {
                 var request = PNCounterAddCodec.EncodeRequest(GetName(), delta, getBeforeUpdate, _observedClock.Get().TimeStampList, targetAddress);
-                return Invoke(request);
+                return _invokeFn(request);
             }
             catch (Exception ex)
             {
@@ -137,7 +140,7 @@ namespace Hazelcast.Client.Proxy
             }
         }
 
-        private IClientMessage InvokeGet(HashSet<Address> excludedAddresses, Exception lastException, Address targetAddress)
+        public IClientMessage InvokeGet(HashSet<Address> excludedAddresses, Exception lastException, Address targetAddress)
         {
             if (targetAddress == null)
             {
@@ -150,7 +153,7 @@ namespace Hazelcast.Client.Proxy
             try
             {
                 var request = PNCounterGetCodec.EncodeRequest(GetName(), _observedClock.Get().TimeStampList, targetAddress);
-                return Invoke(request);
+                return _invokeFn(request);
             }
             catch (Exception ex)
             {

@@ -12,26 +12,25 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+using System.Collections.Generic;
+using Hazelcast.Client.Proxy;
 using Hazelcast.Core;
 using NUnit.Framework;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+
+using TimeStampIList = System.Collections.Generic.IList<System.Collections.Generic.KeyValuePair<string, long>>;
 
 namespace Hazelcast.Client.Test
 {
     [TestFixture]
     public class ClientPNCounterTest : SingleMemberBaseTest
     {
-        internal static IPNCounter _inst;
+        internal static ClientPNCounterProxy _inst;
         internal const string name = "ClientPNCounterTest";
 
         [SetUp]
         public void Init()
         {
-            _inst = Client.GetPNCounter(TestSupport.RandomString());
+            _inst = Client.GetPNCounter(TestSupport.RandomString()) as ClientPNCounterProxy;
         }
 
         [TearDown]
@@ -131,6 +130,58 @@ namespace Hazelcast.Client.Test
 
             Assert.AreEqual(result1, result2);
             Assert.AreEqual(5, result2);
+        }
+
+        [Test]
+        public void UpdateObservedReplicaTimestamps_Later_Succeeded()
+        {
+            var initList = new List<KeyValuePair<string, long>>()
+            {
+                new KeyValuePair<string, long>("node-1", 10),
+                new KeyValuePair<string, long>("node-2", 20),
+                new KeyValuePair<string, long>("node-3", 30),
+                new KeyValuePair<string, long>("node-4", 40),
+                new KeyValuePair<string, long>("node-5", 50)
+            };
+
+            _inst.UpdateObservedReplicaTimestamps(initList);
+
+            var testList = new List<KeyValuePair<string, long>>()
+            {
+                new KeyValuePair<string, long>("node-1", 10),
+                new KeyValuePair<string, long>("node-2", 50),
+                new KeyValuePair<string, long>("node-3", 30),
+                new KeyValuePair<string, long>("node-4", 40),
+                new KeyValuePair<string, long>("node-5", 50)
+            };
+
+            _inst.UpdateObservedReplicaTimestamps(testList);
+        }
+
+        [Test]
+        public void UpdateObservedReplicaTimestamps_Earlier_Succeeded()
+        {
+            var initList = new List<KeyValuePair<string, long>>()
+            {
+                new KeyValuePair<string, long>("node-1", 10),
+                new KeyValuePair<string, long>("node-2", 20),
+                new KeyValuePair<string, long>("node-3", 30),
+                new KeyValuePair<string, long>("node-4", 40),
+                new KeyValuePair<string, long>("node-5", 50)
+            };
+
+            _inst.UpdateObservedReplicaTimestamps(initList);
+
+            var testList = new List<KeyValuePair<string, long>>()
+            {
+                new KeyValuePair<string, long>("node-1", 10),
+                new KeyValuePair<string, long>("node-2", 10),
+                new KeyValuePair<string, long>("node-3", 30),
+                new KeyValuePair<string, long>("node-4", 40),
+                new KeyValuePair<string, long>("node-5", 50)
+            };
+
+            _inst.UpdateObservedReplicaTimestamps(testList);
         }
     }
 }

@@ -15,9 +15,7 @@
  */
 
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+using Hazelcast.Client.Spi;
 
 namespace Hazelcast.Core
 {
@@ -34,12 +32,11 @@ namespace Hazelcast.Core
     ///
     /// The updates to this counter are applied locally when invoked on a CRDT replica. 
     /// A replica can be any hazelcast instance which is not a client or a lite member. 
-    /// The number of replicas in the cluster is determined by the <see cref="PNCounterConfig"/> configuration value.
+    /// The number of replicas in the cluster is determined by the PNCounterConfig configuration value.
     ///
     /// When invoking updates from non-replica instance, the invocation is remote.
     /// This may lead to indeterminate state - the update may be applied but the response has not been received.
-    /// In this case, the caller will be notified with a <exception cref="TargetDisconnectedException"/>
-    /// when invoking from a client or a <exception cref="MemberLeftException"/> when invoked from a member.
+    /// In this case, the caller will be notified with a <exception cref="TargetDisconnectedException"/> when invoking from a client.
     ///
     /// The read and write methods provide monotonic read and RYW(read - your - write) guarantees.
     /// These guarantees are session guarantees which means that if no replica with the previously observed state is reachable,
@@ -63,7 +60,7 @@ namespace Hazelcast.Core
         /// </summary>
         /// <returns>The current value</returns>
         /// <exception cref="NoDataMemberInClusterException">if the cluster does not contain any data members</exception>
-        /// <exception cref="UnsupportedOperationException">if the cluster version is less than 3.10</exception>
+        /// <exception cref="NotSupportedException">if the cluster version is less than 3.10</exception>
         /// <exception cref="ConsistencyLostException">if the session guarantees have been lost</exception>
         long Get();
 

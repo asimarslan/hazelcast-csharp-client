@@ -15,6 +15,7 @@
 using System;
 using System.Collections.Generic;
 using System.Net;
+using Hazelcast.Client.Protocol;
 using Hazelcast.Client.Proxy;
 using Hazelcast.Core;
 using Hazelcast.IO;
@@ -194,27 +195,115 @@ namespace Hazelcast.Client.Test
         }
 
         [Test]
-        public void InvokeAdd_Succeeded()
+        public void InvokeAdd_NoAddressNoLastException_ThrowsDefaultException()
         {
             var excludedAddresses=new HashSet<Address>();
-            var lastException=new Exception();
-            var targetAddress = new Address(new IPEndPoint(Address.GetAddressByName("127.0.0.0"), 1010));
+            Exception lastException = null;
+            Address targetAddress = null;
 
-            _inst._invokeFn = (req) => null;
+            _inst._invokeFunc = (req) => null;
 
-            _inst.InvokeAdd(10, true, excludedAddresses, lastException, targetAddress);
+            var ex = Assert.Throws<NoDataMemberInClusterException>(() => _inst.InvokeAdd(10, true, excludedAddresses, lastException, targetAddress));
+            //Assert.That(ex.Message, Is.EqualTo("Actual exception message"));
         }
 
         [Test]
-        public void InvokeGet_Succeeded()
+        public void InvokeAdd_NoAddressHasLastException_ThrowsLastException()
         {
             var excludedAddresses = new HashSet<Address>();
-            var lastException = new Exception();
-            var targetAddress = new Address(new IPEndPoint(Address.GetAddressByName("127.0.0.0"), 1010));
+            Exception lastException = new OutOfMemoryException();
+            Address targetAddress = null;
 
-            _inst._invokeFn = (req) => null;
+            _inst._invokeFunc = (req) => null;
 
-            _inst.InvokeGet(excludedAddresses, lastException, targetAddress);
+            var ex = Assert.Throws<OutOfMemoryException>(() => _inst.InvokeAdd(10, true, excludedAddresses, lastException, targetAddress));
+        }
+
+        [Test]
+        public void InvokeAdd_ChooseNextAddress_Succeeded()
+        {
+            Exception lastException = null;
+            var targetAddress = new Address(new IPEndPoint(Address.GetAddressByName("127.0.0.2"), 1010));
+
+            var firstUsage = true;
+            _inst._invokeFunc = (req) =>
+            {
+                if (firstUsage)
+                {
+                    firstUsage = false;
+                    throw new Exception();
+                }
+
+                return new ClientMessage();
+            };
+
+            _inst._getClusterMemberListFunc = () => new List<IMember>()
+            {
+                new Member(new Address(new IPEndPoint(Address.GetAddressByName("127.0.0.2"), 1010))),
+                new Member(new Address(new IPEndPoint(Address.GetAddressByName("127.0.0.3"), 1010))),
+                new Member(new Address(new IPEndPoint(Address.GetAddressByName("127.0.0.4"), 1010)))
+            };
+            _inst._getMaxConfiguredReplicaCountFunc = () => 3;
+
+            _inst.InvokeAdd(10, true, ClientPNCounterProxy._emptyAddressList, lastException, targetAddress);
+
+            Assert.AreNotEqual(targetAddress, _inst._currentTargetReplicaAddress);
+        }
+
+        [Test]
+        public void InvokeGet_NoAddressNoLastException_ThrowsDefaultException()
+        {
+            var excludedAddresses = new HashSet<Address>();
+            Exception lastException = null;
+            Address targetAddress = null;
+
+            _inst._invokeFunc = (req) => null;
+
+            var ex = Assert.Throws<NoDataMemberInClusterException>(() => _inst.InvokeGet(excludedAddresses, lastException, targetAddress));
+            //Assert.That(ex.Message, Is.EqualTo("Actual exception message"));
+        }
+
+        [Test]
+        public void InvokeGet_NoAddressHasLastException_ThrowsLastException()
+        {
+            var excludedAddresses = new HashSet<Address>();
+            Exception lastException = new OutOfMemoryException();
+            Address targetAddress = null;
+
+            _inst._invokeFunc = (req) => null;
+
+            var ex = Assert.Throws<OutOfMemoryException>(() => _inst.InvokeGet(excludedAddresses, lastException, targetAddress));
+        }
+
+        [Test]
+        public void InvokeGet_ChooseNextAddress_Succeeded()
+        {
+            Exception lastException = null;
+            var targetAddress = new Address(new IPEndPoint(Address.GetAddressByName("127.0.0.2"), 1010));
+
+            var firstUsage = true;
+            _inst._invokeFunc = (req) =>
+            {
+                if (firstUsage)
+                {
+                    firstUsage = false;
+                    throw new Exception();
+                }
+
+                return new ClientMessage();
+            };
+
+            _inst._getClusterMemberListFunc = () => new List<IMember>()
+            {
+                new Member(new Address(new IPEndPoint(Address.GetAddressByName("127.0.0.2"), 1010))),
+                new Member(new Address(new IPEndPoint(Address.GetAddressByName("127.0.0.3"), 1010))),
+                new Member(new Address(new IPEndPoint(Address.GetAddressByName("127.0.0.4"), 1010)))
+            };
+            _inst._getMaxConfiguredReplicaCountFunc = () => 3;
+
+            _inst.InvokeGet(ClientPNCounterProxy._emptyAddressList, lastException, targetAddress);
+
+            Assert.AreNotEqual(targetAddress, _inst._currentTargetReplicaAddress);
         }
     }
 }

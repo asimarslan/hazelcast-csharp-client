@@ -34,7 +34,7 @@ namespace Hazelcast.Client.Proxy
         internal static readonly HashSet<Address> _emptyAddressList = new HashSet<Address>();
 
         private AtomicReference<VectorClock> _observedClock;
-        private AtomicInteger _maxConfiguredReplicaCount;
+        private readonly AtomicInteger _maxConfiguredReplicaCount;
 
         // Exposed for unit tests
         internal Address _currentTargetReplicaAddress;
@@ -69,10 +69,11 @@ namespace Hazelcast.Client.Proxy
 
         private Address GetCRDTOperationTarget(HashSet<Address> excludedAddresses)
         {
-            // Do not we have the current address on a list of excluded addresses?
+            // Ensure the current address is not on excluded addresses list
             if (_currentTargetReplicaAddress != null  && !excludedAddresses.Contains(_currentTargetReplicaAddress))
                 return _currentTargetReplicaAddress;
 
+            // If address has not been provided or is on exclusion list
             if (_currentTargetReplicaAddress == null || excludedAddresses.Contains(_currentTargetReplicaAddress))
                 _currentTargetReplicaAddress = ChooseTargetReplica(excludedAddresses);
 
@@ -142,8 +143,10 @@ namespace Hazelcast.Client.Proxy
                 if (excludedAddresses == _emptyAddressList)
                     excludedAddresses = new HashSet<Address>();
 
+                // Add current/failed address to exclusion list
                 excludedAddresses.Add(targetAddress);
 
+                // Look for the new target address (taking into account exclusion list)
                 var newTarget = GetCRDTOperationTarget(excludedAddresses);
 
                 // Send null target address in case it's uninitialized instance
@@ -176,8 +179,10 @@ namespace Hazelcast.Client.Proxy
                 if (excludedAddresses == _emptyAddressList)
                     excludedAddresses = new HashSet<Address>();
 
+                // Add current/failed address to exclusion list
                 excludedAddresses.Add(targetAddress);
 
+                // Look for the new target address (taking into account exclusion list)
                 var newTarget = GetCRDTOperationTarget(excludedAddresses);
 
                 // Send null target address in case it's uninitialized instance

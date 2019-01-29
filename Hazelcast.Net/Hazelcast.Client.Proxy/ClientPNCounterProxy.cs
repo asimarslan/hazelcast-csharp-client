@@ -40,17 +40,11 @@ namespace Hazelcast.Client.Proxy
         internal Address _currentTargetReplicaAddress;
 
         // Function redirections (mainly used to provided proper env for test cases)
-        internal Func<IClientMessage, IClientMessage> _invokeFunc;
-        internal Func<ICollection<IMember>> _getClusterMemberListFunc;
-        internal Func<int> _getMaxConfiguredReplicaCountFunc;
 
         public ClientPNCounterProxy(string serviceName, string objectId) : base(serviceName, objectId)
         {
             _observedClock = new AtomicReference<VectorClock>(new VectorClock());
             _maxConfiguredReplicaCount = new AtomicInteger();
-            _invokeFunc = Invoke;
-            _getClusterMemberListFunc = () => GetContext().GetClusterService().GetMemberList();
-            _getMaxConfiguredReplicaCountFunc = GetMaxConfiguredReplicaCount;
         }
 
         public void UpdateObservedReplicaTimestamps(TimeStampIList timeStamps)
@@ -97,7 +91,7 @@ namespace Hazelcast.Client.Proxy
                 return _maxConfiguredReplicaCount.Get();
 
             var request = PNCounterGetConfiguredReplicaCountCodec.EncodeRequest(GetName());
-            var response = _invokeFunc(request);
+            var response = Invoke(request);
             var decodedResult = PNCounterGetConfiguredReplicaCountCodec.DecodeResponse(response);
 
             _maxConfiguredReplicaCount.Set(decodedResult.response);
@@ -106,8 +100,8 @@ namespace Hazelcast.Client.Proxy
 
         private List<Address> GetReplicaAddresses(HashSet<Address> excludedAddresses)
         {
-            var dataMembers = _getClusterMemberListFunc();
-            var maxConfiguredReplicaCount = _getMaxConfiguredReplicaCountFunc();
+            var dataMembers = GetContext().GetClusterService().GetMemberList();
+            var maxConfiguredReplicaCount = GetMaxConfiguredReplicaCount();
             int currentReplicaCount = Math.Min(maxConfiguredReplicaCount, dataMembers.Count);
             var replicaAddresses = dataMembers
                 .Select(x => x.GetAddress())
@@ -131,7 +125,7 @@ namespace Hazelcast.Client.Proxy
             try
             {
                 var request = PNCounterAddCodec.EncodeRequest(GetName(), delta, getBeforeUpdate, _observedClock.Get().TimeStampList, targetAddress);
-                return _invokeFunc(request);
+                return Invoke(request);
             }
             catch (Exception ex)
             {
@@ -167,7 +161,7 @@ namespace Hazelcast.Client.Proxy
             try
             {
                 var request = PNCounterGetCodec.EncodeRequest(GetName(), _observedClock.Get().TimeStampList, targetAddress);
-                return _invokeFunc(request);
+                return Invoke(request);
             }
             catch (Exception ex)
             {
@@ -189,8 +183,6 @@ namespace Hazelcast.Client.Proxy
                 return InvokeGet(excludedAddresses, ex, newTarget.GetPort() == -1 ? null : newTarget);
             }
         }
-
-
 
         public long AddAndGet(long delta)
         {

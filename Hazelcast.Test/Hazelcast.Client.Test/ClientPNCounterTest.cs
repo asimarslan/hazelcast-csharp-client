@@ -17,50 +17,89 @@ using System.Collections.Generic;
 using System.Net;
 using Hazelcast.Client.Protocol;
 using Hazelcast.Client.Proxy;
+using Hazelcast.Config;
 using Hazelcast.Core;
 using Hazelcast.IO;
+using Hazelcast.Remote;
+using Hazelcast.Test;
 using NUnit.Framework;
-
+using Member = Hazelcast.Core.Member;
 using TimeStampIList = System.Collections.Generic.IList<System.Collections.Generic.KeyValuePair<string, long>>;
 
 namespace Hazelcast.Client.Test
 {
     [TestFixture]
-    public class ClientPNCounterTest : SingleMemberBaseTest
+    public class ClientPNCounterTest : MultiMemberBaseTest
     {
-        internal static ClientPNCounterProxy _inst;
-        internal const string name = "ClientPNCounterTest";
-
         [SetUp]
-        public void Init()
+        public void Setup()
         {
-            _inst = Client.GetPNCounter(TestSupport.RandomString()) as ClientPNCounterProxy;
+           
         }
 
         [TearDown]
-        public static void Destroy()
+        public void TearDown()
         {
-            _inst.Destroy();
+           
+        }
+
+        protected override void ConfigureGroup(ClientConfig config)
+        {
+            config.GetGroupConfig().SetName(HzCluster.Id).SetPassword(HzCluster.Id);
+        }
+
+        protected override void ConfigureClient(ClientConfig config)
+        {
+            //config.GetNetworkConfig().AddAddress("localhost:5701");
+            config.GetNetworkConfig().SetConnectionAttemptLimit(1);
+            //config.GetNetworkConfig().SetConnectionAttemptPeriod(2000);
+
+            //base.ConfigureClient(config);
+            //Environment.SetEnvironmentVariable("hazelcast.client.heartbeat.timeout", "5000");
+            //Environment.SetEnvironmentVariable("hazelcast.client.heartbeat.interval", "1000");
+        }
+
+        [OneTimeTearDown]
+        public void RestoreEnvironmentVariables()
+        {
+            Environment.SetEnvironmentVariable("hazelcast.client.heartbeat.timeout", null);
+            Environment.SetEnvironmentVariable("hazelcast.client.heartbeat.interval", null);
+        }
+
+        private HazelcastClient GetClient()
+        {
+            return ((HazelcastClientProxy)CreateClient()).GetClient(); ;
+        }
+
+        private ClientPNCounterProxy GetPNCounterProxy()
+        {
+            return GetClient().GetPNCounter(TestSupport.RandomString()) as ClientPNCounterProxy;
+        }
+        private ClientPNCounterProxy GetPNCounterProxy(IHazelcastInstance client)
+        {
+            return client.GetPNCounter(TestSupport.RandomString()) as ClientPNCounterProxy;
         }
 
         [Test]
         public void Reset_Succeeded()
         {
-            _inst.Reset();
+            GetPNCounterProxy().Reset();
         }
 
         [Test]
         public void AddAndGet_Succeeded()
         {
-            var result = _inst.AddAndGet(10);
+            var result = GetPNCounterProxy().AddAndGet(10);
             Assert.AreEqual(10, result);
         }
 
         [Test]
         public void DecrementAndGet_Succeeded()
         {
-            _inst.AddAndGet(10);
-            var result = _inst.DecrementAndGet();
+            var inst = GetPNCounterProxy();
+            inst.AddAndGet(10);
+
+            var result = inst.DecrementAndGet();
 
             Assert.AreEqual(9, result);
         }
@@ -68,8 +107,9 @@ namespace Hazelcast.Client.Test
         [Test]
         public void Get_Succeeded()
         {
-            _inst.AddAndGet(10);
-            var result = _inst.Get();
+            var inst = GetPNCounterProxy();
+            inst.AddAndGet(10);
+            var result = inst.Get();
 
             Assert.AreEqual(10, result);
         }
@@ -77,10 +117,11 @@ namespace Hazelcast.Client.Test
         [Test]
         public void GetAndAdd_Succeeded()
         {
-            _inst.AddAndGet(10);
+            var inst = GetPNCounterProxy();
+            inst.AddAndGet(10);
 
-            var result1 = _inst.GetAndAdd(10);
-            var result2 = _inst.Get();
+            var result1 = inst.GetAndAdd(10);
+            var result2 = inst.Get();
 
             Assert.AreEqual(result1+10, result2);
         }
@@ -88,10 +129,11 @@ namespace Hazelcast.Client.Test
         [Test]
         public void GetAndDecrement_Succeeded()
         {
-            _inst.AddAndGet(10);
+            var inst = GetPNCounterProxy();
+            inst.AddAndGet(10);
 
-            var result1 = _inst.GetAndDecrement();
-            var result2 = _inst.Get();
+            var result1 = inst.GetAndDecrement();
+            var result2 = inst.Get();
 
             Assert.AreEqual(result1, result2 + 1);
         }
@@ -99,10 +141,11 @@ namespace Hazelcast.Client.Test
         [Test]
         public void GetAndIncrement_Succeeded()
         {
-            _inst.AddAndGet(10);
+            var inst = GetPNCounterProxy();
+            inst.AddAndGet(10);
 
-            var result1 = _inst.GetAndIncrement();
-            var result2 = _inst.Get();
+            var result1 = inst.GetAndIncrement();
+            var result2 = inst.Get();
 
             Assert.AreEqual(result1 + 1, result2);
         }
@@ -110,10 +153,11 @@ namespace Hazelcast.Client.Test
         [Test]
         public void GetAndSubtract_Succeeded()
         {
-            _inst.AddAndGet(10);
+            var inst = GetPNCounterProxy();
+            inst.AddAndGet(10);
 
-            var result1 = _inst.GetAndSubtract(5);
-            var result2 = _inst.Get();
+            var result1 = inst.GetAndSubtract(5);
+            var result2 = inst.Get();
 
             Assert.AreEqual(result1, result2 + 5);
         }
@@ -121,10 +165,11 @@ namespace Hazelcast.Client.Test
         [Test]
         public void IncrementAndGet_Succeeded()
         {
-            _inst.AddAndGet(10);
+            var inst = GetPNCounterProxy();
+            inst.AddAndGet(10);
 
-            var result1 = _inst.IncrementAndGet();
-            var result2 = _inst.Get();
+            var result1 = inst.IncrementAndGet();
+            var result2 = inst.Get();
 
             Assert.AreEqual(result1, result2);
             Assert.AreEqual(11, result2);
@@ -133,10 +178,11 @@ namespace Hazelcast.Client.Test
         [Test]
         public void SubtractAndGet_Succeeded()
         {
-            _inst.AddAndGet(10);
+            var inst = GetPNCounterProxy();
+            inst.AddAndGet(10);
 
-            var result1 = _inst.SubtractAndGet(5);
-            var result2 = _inst.Get();
+            var result1 = inst.SubtractAndGet(5);
+            var result2 = inst.Get();
 
             Assert.AreEqual(result1, result2);
             Assert.AreEqual(5, result2);
@@ -145,6 +191,8 @@ namespace Hazelcast.Client.Test
         [Test]
         public void UpdateObservedReplicaTimestamps_Later_Succeeded()
         {
+            var inst = GetPNCounterProxy();
+
             var initList = new List<KeyValuePair<string, long>>()
             {
                 new KeyValuePair<string, long>("node-1", 10),
@@ -154,7 +202,7 @@ namespace Hazelcast.Client.Test
                 new KeyValuePair<string, long>("node-5", 50)
             };
 
-            _inst.UpdateObservedReplicaTimestamps(initList);
+            inst.UpdateObservedReplicaTimestamps(initList);
 
             var testList = new List<KeyValuePair<string, long>>()
             {
@@ -165,12 +213,14 @@ namespace Hazelcast.Client.Test
                 new KeyValuePair<string, long>("node-5", 50)
             };
 
-            _inst.UpdateObservedReplicaTimestamps(testList);
+            inst.UpdateObservedReplicaTimestamps(testList);
         }
 
         [Test]
         public void UpdateObservedReplicaTimestamps_Earlier_Succeeded()
         {
+            var inst = GetPNCounterProxy();
+
             var initList = new List<KeyValuePair<string, long>>()
             {
                 new KeyValuePair<string, long>("node-1", 10),
@@ -180,7 +230,7 @@ namespace Hazelcast.Client.Test
                 new KeyValuePair<string, long>("node-5", 50)
             };
 
-            _inst.UpdateObservedReplicaTimestamps(initList);
+            inst.UpdateObservedReplicaTimestamps(initList);
 
             var testList = new List<KeyValuePair<string, long>>()
             {
@@ -191,65 +241,80 @@ namespace Hazelcast.Client.Test
                 new KeyValuePair<string, long>("node-5", 50)
             };
 
-            _inst.UpdateObservedReplicaTimestamps(testList);
+            inst.UpdateObservedReplicaTimestamps(testList);
         }
 
         [Test]
         public void InvokeAdd_NoAddressNoLastException_ThrowsDefaultException()
         {
+            var inst = GetPNCounterProxy();
             var excludedAddresses=new HashSet<Address>();
             Exception lastException = null;
             Address targetAddress = null;
 
-            _inst._invokeFunc = (req) => null;
-
-            var ex = Assert.Throws<NoDataMemberInClusterException>(() => _inst.InvokeAdd(10, true, excludedAddresses, lastException, targetAddress));
+            var ex = Assert.Throws<NoDataMemberInClusterException>(() => inst.InvokeAdd(10, true, excludedAddresses, lastException, targetAddress));
             //Assert.That(ex.Message, Is.EqualTo("Actual exception message"));
         }
 
         [Test]
         public void InvokeAdd_NoAddressHasLastException_ThrowsLastException()
         {
+            var inst = GetPNCounterProxy();
             var excludedAddresses = new HashSet<Address>();
             Exception lastException = new OutOfMemoryException();
             Address targetAddress = null;
 
-            _inst._invokeFunc = (req) => null;
-
-            var ex = Assert.Throws<OutOfMemoryException>(() => _inst.InvokeAdd(10, true, excludedAddresses, lastException, targetAddress));
+            var ex = Assert.Throws<OutOfMemoryException>(() => inst.InvokeAdd(10, true, excludedAddresses, lastException, targetAddress));
         }
 
         [Test]
         public void InvokeAdd_ChooseNextAddress_Succeeded()
         {
             Exception lastException = null;
-            var targetAddress = new Address(new IPEndPoint(Address.GetAddressByName("127.0.0.2"), 1010));
 
-            var firstUsage = true;
-            _inst._invokeFunc = (req) =>
-            {
-                if (firstUsage)
-                {
-                    firstUsage = false;
-                    throw new Exception();
-                }
+            var member1 = RemoteController.startMember(HzCluster.Id);
+            var client = CreateClient();
+            var inst = GetPNCounterProxy(client);
 
-                return new ClientMessage();
-            };
+            var member2 = StartMemberAndWait(client, RemoteController, HzCluster, 3);
 
-            _inst._getClusterMemberListFunc = () => new List<IMember>()
-            {
-                new Member(new Address(new IPEndPoint(Address.GetAddressByName("127.0.0.2"), 1010))),
-                new Member(new Address(new IPEndPoint(Address.GetAddressByName("127.0.0.3"), 1010))),
-                new Member(new Address(new IPEndPoint(Address.GetAddressByName("127.0.0.4"), 1010)))
-            };
-            _inst._getMaxConfiguredReplicaCountFunc = () => 3;
+            RemoteController.shutdownMember(HzCluster.Id, member1.Uuid);
 
-            _inst.InvokeAdd(10, true, ClientPNCounterProxy._emptyAddressList, lastException, targetAddress);
+            //Sh(RemoteController, HzCluster, member1);
 
-            Assert.AreNotEqual(targetAddress, _inst._currentTargetReplicaAddress);
+            
+            var targetAddress = new Address(new IPEndPoint(Address.GetAddressByName(member1.Host), member1.Port));
+            inst.InvokeAdd(10, true, ClientPNCounterProxy._emptyAddressList, lastException, targetAddress);
+
+            //Exception lastException = null;
+            //var targetAddress = new Address(new IPEndPoint(Address.GetAddressByName("127.0.0.2"), 1010));
+
+            //var firstUsage = true;
+            //_inst._invokeFunc = (req) =>
+            //{
+            //    if (firstUsage)
+            //    {
+            //        firstUsage = false;
+            //        throw new Exception();
+            //    }
+
+            //    return new ClientMessage();
+            //};
+
+            //_inst._getClusterMemberListFunc = () => new List<IMember>()
+            //{
+            //    new Member(new Address(new IPEndPoint(Address.GetAddressByName("127.0.0.2"), 1010))),
+            //    new Member(new Address(new IPEndPoint(Address.GetAddressByName("127.0.0.3"), 1010))),
+            //    new Member(new Address(new IPEndPoint(Address.GetAddressByName("127.0.0.4"), 1010)))
+            //};
+            //_inst._getMaxConfiguredReplicaCountFunc = () => 3;
+
+            //_inst.InvokeAdd(10, true, ClientPNCounterProxy._emptyAddressList, lastException, targetAddress);
+
+            //Assert.AreNotEqual(targetAddress, _inst._currentTargetReplicaAddress);
         }
 
+        /*
         [Test]
         public void InvokeGet_NoAddressNoLastException_ThrowsDefaultException()
         {
@@ -304,6 +369,6 @@ namespace Hazelcast.Client.Test
             _inst.InvokeGet(ClientPNCounterProxy._emptyAddressList, lastException, targetAddress);
 
             Assert.AreNotEqual(targetAddress, _inst._currentTargetReplicaAddress);
-        }
+        }*/
     }
 }

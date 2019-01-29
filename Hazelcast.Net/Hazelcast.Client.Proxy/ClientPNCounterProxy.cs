@@ -37,7 +37,7 @@ namespace Hazelcast.Client.Proxy
         private readonly AtomicInteger _maxConfiguredReplicaCount;
 
         // Exposed for unit tests
-        internal Address _currentTargetReplicaAddress;
+        internal AtomicReference<Address> _currentTargetReplicaAddress;
 
         // Function redirections (mainly used to provided proper env for test cases)
 
@@ -64,14 +64,14 @@ namespace Hazelcast.Client.Proxy
         private Address GetCRDTOperationTarget(HashSet<Address> excludedAddresses)
         {
             // Ensure the current address is not on excluded addresses list
-            if (_currentTargetReplicaAddress != null  && !excludedAddresses.Contains(_currentTargetReplicaAddress))
-                return _currentTargetReplicaAddress;
+            if (_currentTargetReplicaAddress != null  && !excludedAddresses.Contains(_currentTargetReplicaAddress.Get()))
+                return _currentTargetReplicaAddress.Get();
 
             // If address has not been provided or is on exclusion list
-            if (_currentTargetReplicaAddress == null || excludedAddresses.Contains(_currentTargetReplicaAddress))
-                _currentTargetReplicaAddress = ChooseTargetReplica(excludedAddresses);
+            if (_currentTargetReplicaAddress == null || excludedAddresses.Contains(_currentTargetReplicaAddress.Get()))
+                _currentTargetReplicaAddress.Set(ChooseTargetReplica(excludedAddresses));
 
-            return _currentTargetReplicaAddress;
+            return _currentTargetReplicaAddress.Get();
         }
 
         private Address ChooseTargetReplica(HashSet<Address> excludedAddresses)

@@ -80,7 +80,7 @@ namespace Hazelcast.Client.Proxy
         {
             var replicaAddresses = GetReplicaAddresses(excludedAddresses);
             if (replicaAddresses.Count==0)
-                return new Address();
+                return null;
 
             // Choose random replica
             int randomReplicaIndex = new Random().Next(replicaAddresses.Count);
@@ -102,7 +102,7 @@ namespace Hazelcast.Client.Proxy
 
         private List<Address> GetReplicaAddresses(HashSet<Address> excludedAddresses)
         {
-            var dataMembers = GetContext().GetClusterService().GetMemberList();
+            var dataMembers = GetContext().GetClusterService().GetMemberList().Where(x=>!x.IsLiteMember).ToList();
             var maxConfiguredReplicaCount = GetMaxConfiguredReplicaCount();
             int currentReplicaCount = Math.Min(maxConfiguredReplicaCount, dataMembers.Count);
             var replicaAddresses = dataMembers

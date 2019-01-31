@@ -14,17 +14,13 @@
 
 using System;
 using System.Collections.Generic;
-using System.Net;
-using Hazelcast.Client.Protocol;
+using System.Linq;
 using Hazelcast.Client.Proxy;
 using Hazelcast.Config;
 using Hazelcast.Core;
 using Hazelcast.IO;
-using Hazelcast.Remote;
 using Hazelcast.Test;
 using NUnit.Framework;
-using Member = Hazelcast.Core.Member;
-using TimeStampIList = System.Collections.Generic.IList<System.Collections.Generic.KeyValuePair<string, long>>;
 
 namespace Hazelcast.Client.Test
 {
@@ -52,18 +48,19 @@ namespace Hazelcast.Client.Test
         {
             //config.GetNetworkConfig().AddAddress("localhost:5701");
             config.GetNetworkConfig().SetConnectionAttemptLimit(1);
-            //config.GetNetworkConfig().SetConnectionAttemptPeriod(2000);
+            config.GetNetworkConfig().SetConnectionAttemptPeriod(2000);
 
             //base.ConfigureClient(config);
-            //Environment.SetEnvironmentVariable("hazelcast.client.heartbeat.timeout", "5000");
-            //Environment.SetEnvironmentVariable("hazelcast.client.heartbeat.interval", "1000");
+        }
+
+        protected override string GetServerConfig()
+        {
+            return Resources.hazelcast_quick_node_switching;
         }
 
         [OneTimeTearDown]
         public void RestoreEnvironmentVariables()
         {
-            Environment.SetEnvironmentVariable("hazelcast.client.heartbeat.timeout", null);
-            Environment.SetEnvironmentVariable("hazelcast.client.heartbeat.interval", null);
         }
 
         private HazelcastClient GetClient()
@@ -268,63 +265,17 @@ namespace Hazelcast.Client.Test
         }
 
         [Test]
-        public void InvokeAdd_ChooseNextAddress_Succeeded()
-        {
-            Exception lastException = null;
-
-            var member1 = RemoteController.startMember(HzCluster.Id);
-            var client = CreateClient();
-            var inst = GetPNCounterProxy(client);
-
-            var member2 = StartMemberAndWait(client, RemoteController, HzCluster, 3);
-
-            RemoteController.shutdownMember(HzCluster.Id, member1.Uuid);
-
-            //Sh(RemoteController, HzCluster, member1);
-
-            
-            var targetAddress = new Address(new IPEndPoint(Address.GetAddressByName(member1.Host), member1.Port));
-            inst.InvokeAdd(10, true, ClientPNCounterProxy._emptyAddressList, lastException, targetAddress);
-
-            //Exception lastException = null;
-            //var targetAddress = new Address(new IPEndPoint(Address.GetAddressByName("127.0.0.2"), 1010));
-
-            //var firstUsage = true;
-            //_inst._invokeFunc = (req) =>
-            //{
-            //    if (firstUsage)
-            //    {
-            //        firstUsage = false;
-            //        throw new Exception();
-            //    }
-
-            //    return new ClientMessage();
-            //};
-
-            //_inst._getClusterMemberListFunc = () => new List<IMember>()
-            //{
-            //    new Member(new Address(new IPEndPoint(Address.GetAddressByName("127.0.0.2"), 1010))),
-            //    new Member(new Address(new IPEndPoint(Address.GetAddressByName("127.0.0.3"), 1010))),
-            //    new Member(new Address(new IPEndPoint(Address.GetAddressByName("127.0.0.4"), 1010)))
-            //};
-            //_inst._getMaxConfiguredReplicaCountFunc = () => 3;
-
-            //_inst.InvokeAdd(10, true, ClientPNCounterProxy._emptyAddressList, lastException, targetAddress);
-
-            //Assert.AreNotEqual(targetAddress, _inst._currentTargetReplicaAddress);
-        }
-
-        /*
-        [Test]
         public void InvokeGet_NoAddressNoLastException_ThrowsDefaultException()
         {
             var excludedAddresses = new HashSet<Address>();
             Exception lastException = null;
             Address targetAddress = null;
 
-            _inst._invokeFunc = (req) => null;
+            // Get PNCounter instance
+            var client = CreateClient();
+            var inst = GetPNCounterProxy(client);
 
-            var ex = Assert.Throws<NoDataMemberInClusterException>(() => _inst.InvokeGet(excludedAddresses, lastException, targetAddress));
+            var ex = Assert.Throws<NoDataMemberInClusterException>(() => inst.InvokeGet(excludedAddresses, lastException, targetAddress));
             //Assert.That(ex.Message, Is.EqualTo("Actual exception message"));
         }
 
@@ -335,40 +286,11 @@ namespace Hazelcast.Client.Test
             Exception lastException = new OutOfMemoryException();
             Address targetAddress = null;
 
-            _inst._invokeFunc = (req) => null;
+            // Get PNCounter instance
+            var client = CreateClient();
+            var inst = GetPNCounterProxy(client);
 
-            var ex = Assert.Throws<OutOfMemoryException>(() => _inst.InvokeGet(excludedAddresses, lastException, targetAddress));
+            var ex = Assert.Throws<OutOfMemoryException>(() => inst.InvokeGet(excludedAddresses, lastException, targetAddress));
         }
-
-        [Test]
-        public void InvokeGet_ChooseNextAddress_Succeeded()
-        {
-            Exception lastException = null;
-            var targetAddress = new Address(new IPEndPoint(Address.GetAddressByName("127.0.0.2"), 1010));
-
-            var firstUsage = true;
-            _inst._invokeFunc = (req) =>
-            {
-                if (firstUsage)
-                {
-                    firstUsage = false;
-                    throw new Exception();
-                }
-
-                return new ClientMessage();
-            };
-
-            _inst._getClusterMemberListFunc = () => new List<IMember>()
-            {
-                new Member(new Address(new IPEndPoint(Address.GetAddressByName("127.0.0.2"), 1010))),
-                new Member(new Address(new IPEndPoint(Address.GetAddressByName("127.0.0.3"), 1010))),
-                new Member(new Address(new IPEndPoint(Address.GetAddressByName("127.0.0.4"), 1010)))
-            };
-            _inst._getMaxConfiguredReplicaCountFunc = () => 3;
-
-            _inst.InvokeGet(ClientPNCounterProxy._emptyAddressList, lastException, targetAddress);
-
-            Assert.AreNotEqual(targetAddress, _inst._currentTargetReplicaAddress);
-        }*/
     }
 }

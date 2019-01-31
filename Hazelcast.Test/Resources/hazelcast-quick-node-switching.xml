@@ -47,9 +47,9 @@
     </data-serializable-factories>
   </serialization>
 
-  <!--<crdt-replication>
-    <max-concurrent-replication-targets>10000000</max-concurrent-replication-targets>
-    <replication-period-millis>10000000</replication-period-millis>
-  </crdt-replication>-->
+  <crdt-replication>
+    <max-concurrent-replication-targets>2147483647</max-concurrent-replication-targets>
+    <replication-period-millis>2147483647</replication-period-millis>
+  </crdt-replication>
   
 </hazelcast>

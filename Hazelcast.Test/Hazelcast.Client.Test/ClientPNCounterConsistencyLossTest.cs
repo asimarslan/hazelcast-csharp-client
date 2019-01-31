@@ -15,6 +15,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using Hazelcast.Client.Proxy;
 using Hazelcast.Config;
 using Hazelcast.Core;
@@ -25,32 +26,32 @@ using NUnit.Framework;
 namespace Hazelcast.Client.Test
 {
     [TestFixture]
-    public class ClientPNCounterTest_ConsistencyLoss_Add : MultiMemberBaseTest
+    public class ClientPNCounterConsistencyLossTest : MultiMemberBaseTest
     {
+        private ClientPNCounterProxy pnCounter;
+        
         [SetUp]
         public void Setup()
         {
-           
+            pnCounter = Client.GetPNCounter(TestSupport.RandomString()) as ClientPNCounterProxy;
         }
 
         [TearDown]
         public void TearDown()
         {
-           
         }
 
-        protected override void ConfigureGroup(ClientConfig config)
+        protected override void InitMembers()
         {
-            config.GetGroupConfig().SetName(HzCluster.Id).SetPassword(HzCluster.Id);
+            //Init 2 members
+            MemberList.Add(RemoteController.startMember(HzCluster.Id));
+            MemberList.Add(RemoteController.startMember(HzCluster.Id));
         }
 
         protected override void ConfigureClient(ClientConfig config)
         {
-            //config.GetNetworkConfig().AddAddress("localhost:5701");
             config.GetNetworkConfig().SetConnectionAttemptLimit(1);
             config.GetNetworkConfig().SetConnectionAttemptPeriod(2000);
-
-            //base.ConfigureClient(config);
         }
 
         protected override string GetServerConfig()
@@ -58,51 +59,36 @@ namespace Hazelcast.Client.Test
             return Resources.hazelcast_quick_node_switching;
         }
 
-        [OneTimeTearDown]
-        public void RestoreEnvironmentVariables()
-        {
-        }
-
-        private HazelcastClient GetClient()
-        {
-            return ((HazelcastClientProxy)CreateClient()).GetClient(); ;
-        }
-
-        private ClientPNCounterProxy GetPNCounterProxy()
-        {
-            return GetClient().GetPNCounter(TestSupport.RandomString()) as ClientPNCounterProxy;
-        }
-        private ClientPNCounterProxy GetPNCounterProxy(IHazelcastInstance client)
-        {
-            return client.GetPNCounter(TestSupport.RandomString()) as ClientPNCounterProxy;
-        }
-
         [Test]
-        public void ConsistencyLostExceptionIsThrownWhenTargetReplicaDisappears_AddCase()
+        public void ConsistencyLostExceptionIsThrownWhenTargetReplicaDisappears()
         {
-            // Start additional member
-            RemoteController.startMember(HzCluster.Id);
+            Mutate(pnCounter);
+            Assert.AreEqual(5, pnCounter.Get());
+            
+            TerminateTargetReplicaMember();
+            
+            Thread.Sleep(1000);
+            
+            Assert.Catch<ConsistencyLostException>(() =>
+            {
+                Mutate(pnCounter);
+                
+            });
+        }
 
-            // Obtain all the members
-            var client = CreateClient();
-            var allMembers = client.GetCluster().GetMembers();
+        private void Mutate(ClientPNCounterProxy pnCounter)
+        {
+            pnCounter.AddAndGet(5);
+        }
 
-            // Get PNCounter instance
-            var inst = GetPNCounterProxy(client);
-
-            // Init the counter value
-            var result1 = inst.AddAndGet(5);
-
+        private void TerminateTargetReplicaMember()
+        {
             // Shutdown "primary" member
-            var currentTarget = inst._currentTargetReplicaAddress;
+            var allMembers = Client.GetCluster().GetMembers();
+            var currentTarget = pnCounter._currentTargetReplicaAddress;
             var primaryMember = allMembers.First(x => x.GetAddress().Equals(currentTarget));
 
             RemoteController.terminateMember(HzCluster.Id, primaryMember.GetUuid());
-
-            // Obtain the value from the cluster second time
-            var result2 = inst.AddAndGet(5);
-
-            Assert.AreEqual(result1 + 5, result2);
         }
     }
 }

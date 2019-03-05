@@ -15,6 +15,7 @@ namespace Hazelcast.Test
         public static string hazelcast {get { return GetXmlResourceContent("hazelcast"); }}
         public static string hazelcast_delay {get { return GetXmlResourceContent("hazelcast-delay"); }}
         public static string hazelcast_hb {get { return GetXmlResourceContent("hazelcast-hb"); }}
+        public static string hazelcast_hbee {get { return GetXmlResourceContent("hazelcast-hbee"); }}
         public static string hazelcast_ipv6 {get { return GetXmlResourceContent("hazelcast-ipv6"); }}
         public static string hazelcast_ma_required {get { return GetXmlResourceContent("hazelcast-ma-required"); }}
         public static string hazelcast_ma_optional {get { return GetXmlResourceContent("hazelcast-ma-optional"); }}

@@ -33,6 +33,10 @@ namespace Hazelcast.Client.Protocol.Util
         private readonly HandleMessageDelegate _delegate;
         private ClientMessage _message = ClientMessage.Create();
 
+        public static List<long> times = new List<long>();
+        
+        private static readonly DateTime Start = DateTime.UtcNow;
+        
         public ClientMessageBuilder(HandleMessageDelegate _delegate)
         {
             this._delegate = _delegate;
@@ -87,6 +91,7 @@ namespace Hazelcast.Client.Protocol.Util
 
         private void HandleMessage(ClientMessage message)
         {
+            times.Add((long) (DateTime.UtcNow - Start).TotalMilliseconds);
             message.Index(message.GetDataOffset());
             _delegate(message);
         }

@@ -108,6 +108,7 @@ using Hazelcast.Util;
 
         public void HandleClientMessage(IClientMessage message)
         {
+//            Logger.Info( "Response received: " + message);
             if (message.IsFlagSet(ClientMessage.ListenerEventFlag))
             {
                 _clientListenerService.HandleResponseMessage(message);
@@ -326,7 +327,7 @@ using Hazelcast.Util;
             if (!TryRegisterInvocation(correlationId, clientInvocation)) return false;
 
             //enqueue to write queue
-            if (connection.WriteAsync((ISocketWritable) clientInvocation.Message))
+            if (connection.EnqueueMessage((ISocketWritable) clientInvocation.Message))
             {
                 return true;
             }

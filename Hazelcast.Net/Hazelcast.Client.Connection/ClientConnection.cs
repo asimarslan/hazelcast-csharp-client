@@ -47,7 +47,8 @@ namespace Hazelcast.Client.Connection
         private readonly int _id;
         private readonly ByteBuffer _receiveBuffer;
         private readonly ByteBuffer _sendBuffer;
-        private readonly BlockingCollection<ISocketWritable> _writeQueue = new BlockingCollection<ISocketWritable>();
+        private readonly ConcurrentQueue<ISocketWritable> _writeQueue = new ConcurrentQueue<ISocketWritable>();
+        private readonly ManualResetEventSlim _newDataRegisteredEvent = new ManualResetEventSlim();
 
         private readonly Socket _clientSocket;
         private readonly Stream _stream;
@@ -206,33 +207,24 @@ namespace Hazelcast.Client.Connection
         public void Close()
         {
             if (!_live.CompareAndSet(true, false))
-            {
                 return;
-            }
-            _writeQueue.CompleteAdding();
 
             if (_writeThread != null && _writeThread.IsAlive)
-            {
                 _writeThread.Interrupt();
-            }
+
             if (Logger.IsFinestEnabled())
-            {
                 Logger.Finest(string.Format("Closing socket, address: {0} id: {1}", GetAddress(), _id));
-            }
 
             try
             {
                 _stream.Close();
                 _clientSocket.Shutdown(SocketShutdown.Both);
                 _clientSocket.Close();
-
             }
             catch (Exception e)
             {
                 if (Logger.IsFinestEnabled())
-                {
                     Logger.Finest("Exception occured during socket shutdown", e);
-                }
             }
         }
 
@@ -270,17 +262,20 @@ namespace Hazelcast.Client.Connection
             return "Connection [" + _member + " -> CLOSED ]";
         }
 
-        public bool WriteAsync(ISocketWritable packet)
+        public bool EnqueueMessage(ISocketWritable packet)
         {
             if (!Live)
             {
                 if (Logger.IsFinestEnabled())
-                {
                     Logger.Finest("Connection is closed, won't write packet -> " + packet);
-                }
+
                 return false;
             }
-            return _writeQueue.TryAdd(packet);
+
+            _writeQueue.Enqueue(packet);
+            _newDataRegisteredEvent.Set();
+
+            return true;
         }
 
         internal Socket GetSocket()
@@ -364,14 +359,12 @@ namespace Hazelcast.Client.Connection
 
                 _builder.OnData(_receiveBuffer);
                 LastRead = DateTime.Now;
+
                 if (_receiveBuffer.HasRemaining())
-                {
                     _receiveBuffer.Compact();
-                }
                 else
-                {
                     _receiveBuffer.Clear();
-                }
+
                 BeginRead();
             }
             catch (Exception e)
@@ -416,40 +409,26 @@ namespace Hazelcast.Client.Connection
 
         private void WriteQueueLoop()
         {
+            ISocketWritable _lastWritable = null;
+
             try
             {
-                while (!_writeQueue.IsAddingCompleted)
+                while (_live.Get())
                 {
-                    try
-                    {
-                        if (_lastWritable == null)
-                        {
-                            _lastWritable = _writeQueue.Take();
-                        }
-                    }
-                    catch (Exception)
-                    {
-                        //BlockingCollection is empty
-                        if (_writeQueue.IsAddingCompleted)
-                        {
-                            return;
-                        }
-                    }
+                    _newDataRegisteredEvent.Wait();
+                    _newDataRegisteredEvent.Reset();
+
+                    if (_lastWritable == null)
+                        _writeQueue.TryDequeue(out _lastWritable);
 
                     while (_sendBuffer.HasRemaining() && _lastWritable != null)
                     {
                         var complete = _lastWritable.WriteTo(_sendBuffer);
-                        if (complete)
-                        {
-                            //grap one from queue
-                            ISocketWritable tmp;
-                            _writeQueue.TryTake(out tmp);
-                            _lastWritable = tmp;
-                        }
+
+                        if (complete) //grap one from queue
+                            _writeQueue.TryDequeue(out _lastWritable);
                         else
-                        {
                             break;
-                        }
                     }
                     if (_sendBuffer.Position > 0)
                     {
@@ -467,7 +446,6 @@ namespace Hazelcast.Client.Connection
                         }
                     }
                 }
-
             }
             catch (ThreadInterruptedException)
             {

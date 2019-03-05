@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<hazelcast xsi:schemaLocation="http://www.hazelcast.com/schema/config hazelcast-config-3.8.xsd"
+           xmlns="http://www.hazelcast.com/schema/config"
+           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+
+  <properties>
+    <property name="hazelcast.client.max.no.heartbeat.seconds">8</property>
+  </properties>
+
+  <group>
+    <name>dev</name>
+    <password>dev-pass</password>
+  </group>
+  <management-center enabled="false">http://localhost:8080/mancenter</management-center>
+  <network>
+    <port auto-increment="true" port-count="100">5701</port>
+    <outbound-ports>
+      <!--
+            Allowed port range when connecting to other nodes.
+            0 or * means use system provided port.
+            -->
+      <ports>0</ports>
+    </outbound-ports>
+    <join>
+      <multicast enabled="true">
+        <multicast-group>224.7.7.7</multicast-group>
+        <multicast-port>54327</multicast-port>
+      </multicast>
+      <tcp-ip enabled="false">
+        <interface>127.0.0.1</interface>
+      </tcp-ip>
+    </join>
+    <public-address>127.0.0.1</public-address>
+    <ssl enabled="false"/>
+    <socket-interceptor enabled="false"/>
+  </network>
+  <serialization>
+    <data-serializable-factories>
+      <data-serializable-factory factory-id="66">com.hazelcast.client.test.IdentifiedFactory
+      </data-serializable-factory>
+    </data-serializable-factories>
+  </serialization>
+  <map name="test-*">
+    <hot-restart enabled="false">
+      <fsync>false</fsync>
+    </hot-restart>
+    <in-memory-format>NATIVE</in-memory-format>
+    <backup-count>1</backup-count>
+    <async-backup-count>0</async-backup-count>
+    <time-to-live-seconds>0</time-to-live-seconds>
+    <max-idle-seconds>0</max-idle-seconds>
+    <eviction-policy>NONE</eviction-policy>
+    <max-size policy="PER_NODE">0</max-size>
+    <eviction-percentage>25</eviction-percentage>
+    <min-eviction-check-millis>100</min-eviction-check-millis>
+    <merge-policy>com.hazelcast.spi.merge.PutIfAbsentMergePolicy</merge-policy>
+  </map>
+
+  <native-memory enabled="true" allocator-type="POOLED">
+    <size value="5" unit="GIGABYTES"/>
+  </native-memory>
+
+</hazelcast>

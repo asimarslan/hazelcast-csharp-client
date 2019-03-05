@@ -1,13 +1,18 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <Import Project="..\shared.project.props" />
   <PropertyGroup Label="build">
-    <TargetFrameworks>net40;netcoreapp2.0</TargetFrameworks>
+    <TargetFrameworks>net46;netcoreapp2.0</TargetFrameworks>
     <AssemblyName>Hazelcast.Examples</AssemblyName>
     <RootNamespace>Hazelcast.Examples</RootNamespace>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <OutputType>Exe</OutputType>
     <LangVersion>4</LangVersion>
   </PropertyGroup>
+    <PropertyGroup Label="sign">
+        <SignAssembly>true</SignAssembly>
+        <PublicSign>true</PublicSign>
+        <AssemblyOriginatorKeyFile>..\public.snk</AssemblyOriginatorKeyFile>
+    </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\Hazelcast.Net\Hazelcast.Net.csproj" />
   </ItemGroup>

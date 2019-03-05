@@ -17,6 +17,7 @@ using System.IO;
 using System.Text;
 using Hazelcast.Client.Protocol.Util;
 using Hazelcast.IO;
+using Hazelcast.Logging;
 using Hazelcast.Net.Ext;
 using Hazelcast.Util;
 
@@ -172,6 +173,7 @@ namespace Hazelcast.Client.Protocol
 
         public virtual bool WriteTo(ByteBuffer destination)
         {
+//            Logger.GetLogger("ClientMessage").Info("SENDING:" + this);
             var byteArray = Buffer.ByteArray();
             var size = GetFrameLength();
             // the number of bytes that can be written to the bb.

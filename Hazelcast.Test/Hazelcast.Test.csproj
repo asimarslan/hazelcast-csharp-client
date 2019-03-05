@@ -5,7 +5,6 @@
     <title>Hazelcast .Net Client Test</title>
     <Description>Hazelcast .Net Client Unit Tests Project</Description>
     <TargetFrameworks>net46;netcoreapp2.0</TargetFrameworks>
-    <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <LangVersion>4</LangVersion>
     <RootNamespace />
@@ -17,7 +16,7 @@
   </PropertyGroup>
   <ItemGroup Condition="'$(TargetFramework)'=='netcoreapp2.0'">
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="15.9.0" />
-    <PackageReference Include="NUnit3TestAdapter" Version="3.11.2" />
+    <PackageReference Include="NUnit3TestAdapter" Version="3.11.3" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="Thrift">

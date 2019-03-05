@@ -12,12 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+using Hazelcast.Examples.Map;
+
 namespace Hazelcast.Examples
 {
     internal class App
     {
         public static void Main(string[] args)
         {
+            MapGetAsync.Run(args);
         }
     }
 }

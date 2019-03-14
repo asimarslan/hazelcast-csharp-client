@@ -18,6 +18,7 @@ using System.Diagnostics;
 using Hazelcast.Client.Spi;
 using Hazelcast.IO.Serialization;
 using Hazelcast.Logging;
+using Hazelcast.Net.Ext;
 
 namespace Hazelcast.NearCache
 {
@@ -84,7 +85,7 @@ namespace Hazelcast.NearCache
                 {
                     break;
                 }
-                if (metaData.CompareAndExcangeSquence(currentSequence, nextSequence))
+                if (metaData.CompareAndExchangeSequence(currentSequence, nextSequence))
                 {
                     var sequenceDiff = nextSequence - currentSequence;
                     if (viaAntiEntropy || sequenceDiff > 1L)
@@ -192,6 +193,15 @@ namespace Hazelcast.NearCache
         public override string ToString()
         {
             return string.Format("RepairingHandler{{name='{0}', localUuid='{1}'}}", _nearCache.Name, _localUuid);
+        }
+
+        public void InitInvalidationMetadata(NearCacheRecord newRecord)
+        {
+            var partitionId = _partitionService.GetPartitionId(newRecord.Key);
+            var metadataContainer = GetMetaDataContainer(partitionId);
+            newRecord.PartitionId = partitionId;
+            newRecord.Sequence = metadataContainer.Sequence;
+            newRecord.Guid = metadataContainer.Guid;
         }
 
         internal void FixSequenceGap()

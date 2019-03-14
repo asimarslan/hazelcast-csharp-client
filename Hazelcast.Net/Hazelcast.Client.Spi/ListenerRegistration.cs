@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+using System;
 using System.Collections.Concurrent;
 using Hazelcast.Client.Connection;
 using Hazelcast.Client.Protocol;
@@ -23,25 +24,25 @@ namespace Hazelcast.Client.Spi
     internal class ListenerRegistration
     {
         public string UserRegistrationId { get; private set; }
-        public IClientMessage RegistrationRequest { get; private set; }
+        public EncodeRegisterRequest EncodeRegistrationRequest { get; private set; }
         public DecodeRegisterResponse DecodeRegisterResponse { get; private set; }
         public EncodeDeregisterRequest EncodeDeregisterRequest { get; private set; }
         public DistributedEventHandler EventHandler { get; private set; }
         public ConcurrentDictionary<ClientConnection, EventRegistration> ConnectionRegistrations { get; private set; }
 
-        public ListenerRegistration(string userRegistrationId, IClientMessage registrationRequest = null,
+        public ListenerRegistration(string userRegistrationId, EncodeRegisterRequest encodeRegistrationRequest = null,
             DecodeRegisterResponse decodeRegisterResponse = null, EncodeDeregisterRequest encodeDeregisterRequest = null,
             DistributedEventHandler eventHandler = null)
         {
             UserRegistrationId = userRegistrationId;
-            RegistrationRequest = registrationRequest;
+            EncodeRegistrationRequest = encodeRegistrationRequest;
             EncodeDeregisterRequest = encodeDeregisterRequest;
             DecodeRegisterResponse = decodeRegisterResponse;
             EventHandler = eventHandler;
             ConnectionRegistrations  = new ConcurrentDictionary<ClientConnection, EventRegistration>();
         }
 
-        protected bool Equals(ListenerRegistration other)
+        private bool Equals(ListenerRegistration other)
         {
             return string.Equals(UserRegistrationId, other.UserRegistrationId);
         }

@@ -23,10 +23,10 @@ namespace Hazelcast.Util
 
     public delegate T Callable<T>();
 
-    internal delegate void Authenticator(ClientConnection connection);
-
     public delegate void DistributedEventHandler(IClientMessage eventMessage);
 
+    public delegate IClientMessage EncodeRegisterRequest();
+    
     public delegate string DecodeRegisterResponse(IClientMessage requestMessage);
 
     public delegate IClientMessage EncodeDeregisterRequest(string registrationId);

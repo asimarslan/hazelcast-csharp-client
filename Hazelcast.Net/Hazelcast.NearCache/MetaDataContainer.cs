@@ -66,12 +66,12 @@ namespace Hazelcast.NearCache
             return _missedSequenceCount.AddAndGet(missCount);
         }
 
-        public bool CompareAndExcangeSquence(long currentSequence, long nextSequence)
+        public bool CompareAndExchangeSequence(long currentSequence, long nextSequence)
         {
             return _sequence.CompareAndSet(currentSequence, nextSequence);
         }
 
-        private bool CompareAndExcangeStaleSequence(long lastKnownStaleSequence, long lastReceivedSequence)
+        private bool CompareAndExchangeStaleSequence(long lastKnownStaleSequence, long lastReceivedSequence)
         {
             return _staleSequence.CompareAndSet(lastKnownStaleSequence, lastReceivedSequence);
         }
@@ -122,7 +122,7 @@ namespace Hazelcast.NearCache
                 {
                     break;
                 }
-            } while (!CompareAndExcangeStaleSequence(lastKnownStaleSequence, lastReceivedSequence));
+            } while (!CompareAndExchangeStaleSequence(lastKnownStaleSequence, lastReceivedSequence));
         }
     }
 }

@@ -250,7 +250,7 @@ namespace Hazelcast.Client.Spi
             EncodeDeregisterRequest encodeDeregisterRequest, DistributedEventHandler eventHandler)
         {
             return _context.GetListenerService()
-                .RegisterListener(registrationMessage, responseDecoder, encodeDeregisterRequest, eventHandler);
+                .RegisterListener(()=>registrationMessage, responseDecoder, encodeDeregisterRequest, eventHandler);
         }
 
         protected virtual bool DeregisterListener(string userRegistrationId)

@@ -17,6 +17,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using Hazelcast.Client.Model;
 using Hazelcast.Config;
 using Hazelcast.Core;
@@ -161,6 +162,12 @@ namespace Hazelcast.Client.Test
 
             var o = f.Result;
             Assert.AreEqual("value1", o);
+
+        }
+
+        public virtual async Task AsyncGet()
+        {
+            var result = await map.GetAsync("key1");
         }
 
         /// <exception cref="System.Exception"></exception>

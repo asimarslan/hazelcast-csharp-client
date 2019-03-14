@@ -15,6 +15,8 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Hazelcast.Client.Protocol;
+using Hazelcast.Client.Protocol.Codec;
 using Hazelcast.Core;
 using Hazelcast.IO.Serialization;
 using Hazelcast.Map;
@@ -77,6 +79,75 @@ namespace Hazelcast.Client.Proxy
             return base.containsKeyInternal(keyData);
         }
 
+        public override Task<TValue> GetAsync(TKey key)
+        {
+            ValidationUtil.CheckNotNull(key, ValidationUtil.NULL_KEY_IS_NOT_ALLOWED);
+            var keyData = ToData(key);
+            object cached;
+            if (_nearCache.TryGetValue(keyData, out cached))
+            {
+                TaskCompletionSource<object> tcs = new TaskCompletionSource<object>();
+                tcs.SetResult(cached);
+                return tcs.Task.ContinueWith(t => ToObject<TValue>(t.Result));
+            }
+            
+            var request = MapGetCodec.EncodeRequest(GetName(), keyData, ThreadUtil.GetThreadId());
+            return InvokeAsync(request, keyData, m => GetAsyncResponse(keyData, m))
+                .ContinueWith(t=>ToObject<TValue>(t.Result));
+        }
+        
+        protected override IData GetAsyncResponse(IData keyData, IClientMessage responseMessage)
+        {
+            var response = base.GetAsyncResponse(keyData, responseMessage);
+            _nearCache.TryAdd(keyData, response);
+            return response;
+        }
+
+//        public override Task<TValue> GetAsync(TKey key)
+//        {
+//            var keyData = ToData(key);
+//            if (_nearCache != null)
+//            {
+////                object cached = _nearCache.TryGetValue(keyData);
+//                object cached;
+//                if (_nearCache.TryGetValue(keyData, out cached))
+//                {
+//                    TaskCompletionSource<TValue> tcs = new TaskCompletionSource<TValue>();
+//                    tcs.SetResult(cached);
+//                    var task = GetContext().GetExecutionService().Submit(() =>
+//                    {
+//                        if (cached.Equals(NearCache.NullObject))
+//                        {
+//                            return default(TValue);
+//                        }
+//                        return (TValue) cached;
+//                    });
+//                    return task;
+//                }
+//            }
+//
+//            var request = MapGetCodec.EncodeRequest(GetName(), keyData, ThreadUtil.GetThreadId());
+//            try
+//            {
+//                var task = GetContext().GetInvocationService().InvokeOnKeyOwner(request, key);
+//                var deserializeTask = task.ToTask().ContinueWith(continueTask =>
+//                {
+//                    var responseMessage = ThreadUtil.GetResult(continueTask);
+//                    var result = MapGetCodec.DecodeResponse(responseMessage).response;
+//                    if (_nearCache != null)
+//                    {
+//                        _nearCache.Put(keyData, result);
+//                    }
+//                    return ToObject<TValue>(result);
+//                });
+//                return deserializeTask;
+//            }
+//            catch (Exception e)
+//            {
+//                throw ExceptionUtil.Rethrow(e);
+//            }
+//        }
+
         protected override object GetInternal(IData keyData)
         {
             try
@@ -91,6 +162,7 @@ namespace Hazelcast.Client.Proxy
                 throw ExceptionUtil.Rethrow(exception);
             }
         }
+
 
         protected override TValue RemoveInternal(IData keyData)
         {

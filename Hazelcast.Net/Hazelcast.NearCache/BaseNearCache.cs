@@ -17,6 +17,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading;
 using Hazelcast.Client;
+using Hazelcast.Client.Spi;
 using Hazelcast.Config;
 using Hazelcast.IO.Serialization;
 using Hazelcast.Logging;
@@ -35,7 +36,7 @@ namespace Hazelcast.NearCache
 
         private readonly AtomicBoolean _canCleanUp;
         private readonly AtomicBoolean _canEvict;
-        protected readonly HazelcastClient Client;
+//        protected readonly HazelcastClient Client;
 
         private readonly EvictionPolicy _evictionPolicy;
         private readonly InMemoryFormat _inMemoryFormat;
@@ -53,24 +54,33 @@ namespace Hazelcast.NearCache
 
         private long _lastCleanup;
         protected string RegistrationId;
+        
+        //services
+        protected readonly ISerializationService _serializationService;
+        protected readonly IClientExecutionService _clientExecutionService;
+        protected readonly IClientListenerService _clientListenerService;
 
         protected BaseNearCache(string name, HazelcastClient client, NearCacheConfig nearCacheConfig)
         {
             _name = name;
-            Client = client;
+            _serializationService = client.GetSerializationService();
+            _clientExecutionService = client.GetClientExecutionService();
+            _clientListenerService = client.GetListenerService();
+//            Client = client;
             _maxSize = nearCacheConfig.GetMaxSize();
             _maxIdleMillis = nearCacheConfig.GetMaxIdleSeconds() * 1000;
             _inMemoryFormat = nearCacheConfig.GetInMemoryFormat();
             _timeToLiveMillis = nearCacheConfig.GetTimeToLiveSeconds() * 1000;
             _evictionPolicy =
                 (EvictionPolicy) Enum.Parse(typeof(EvictionPolicy), nearCacheConfig.GetEvictionPolicy(), true);
+            InvalidateOnChange = nearCacheConfig.IsInvalidateOnChange();
+            
             _records = new ConcurrentDictionary<IData, Lazy<NearCacheRecord>>();
             _canCleanUp = new AtomicBoolean(true);
             _canEvict = new AtomicBoolean(true);
             _lastCleanup = Clock.CurrentTimeMillis();
             _selectedComparer = GetComparer(_evictionPolicy);
             _stat = new NearCacheStatistics();
-            InvalidateOnChange = nearCacheConfig.IsInvalidateOnChange();
         }
 
         public ConcurrentDictionary<IData, Lazy<NearCacheRecord>> Records
@@ -104,7 +114,7 @@ namespace Hazelcast.NearCache
         {
             if (RegistrationId != null)
             {
-                Client.GetListenerService().DeregisterListener(RegistrationId);
+                _clientListenerService.DeregisterListener(RegistrationId);
             }
             _records.Clear();
         }
@@ -184,10 +194,13 @@ namespace Hazelcast.NearCache
                 return nearCacheRecord;
             }, LazyThreadSafetyMode.ExecutionAndPublication);
 
+            //do we need eviction
             if (_evictionPolicy != EvictionPolicy.None && _records.Count >= _maxSize)
             {
                 FireEvictCache();
             }
+            // if there is no eviction configured we return if the Near Cache is full and it's a new key
+            // (we have to check the key, otherwise we might lose updates on existing keys)
             if (_evictionPolicy == EvictionPolicy.None && _records.Count >= _maxSize && !_records.ContainsKey(keyData))
             {
                 value = remoteCall(keyData);
@@ -254,8 +267,8 @@ namespace Hazelcast.NearCache
         private object ConvertToRecordValue(object Object)
         {
             object value = _inMemoryFormat.Equals(InMemoryFormat.Binary)
-                ? Client.GetSerializationService().ToData(Object)
-                : Client.GetSerializationService().ToObject<object>(Object);
+                ? _serializationService.ToData(Object)
+                : _serializationService.ToObject<object>(Object);
             return value;
         }
 
@@ -266,7 +279,7 @@ namespace Hazelcast.NearCache
             {
                 try
                 {
-                    Client.GetClientExecutionService().Submit(FireEvictCacheFunc);
+                    _clientExecutionService.Submit(FireEvictCacheFunc);
                 }
                 catch (Exception e)
                 {
@@ -319,7 +332,7 @@ namespace Hazelcast.NearCache
             {
                 try
                 {
-                    Client.GetClientExecutionService().Submit(FireTtlCleanupFunc);
+                    _clientExecutionService.Submit(FireTtlCleanupFunc);
                 }
                 catch (Exception e)
                 {

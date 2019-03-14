@@ -83,7 +83,7 @@ namespace Hazelcast.Client.Spi
                     }
                 });
             };
-            return context.GetListenerService().RegisterListener(request,
+            return context.GetListenerService().RegisterListener(()=>request,
                 m => ClientAddDistributedObjectListenerCodec.DecodeResponse(m).response,
                 ClientRemoveDistributedObjectListenerCodec.EncodeRequest, eventHandler);
         }

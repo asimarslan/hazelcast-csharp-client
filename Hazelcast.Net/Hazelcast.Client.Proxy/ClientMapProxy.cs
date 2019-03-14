@@ -164,12 +164,20 @@ namespace Hazelcast.Client.Proxy
             Invoke(request);
         }
 
-        public Task<TValue> GetAsync(TKey key)
+        public virtual Task<TValue> GetAsync(TKey key)
         {
-            var task = GetContext().GetExecutionService().Submit(() => Get(key));
-            return task;
+            ValidationUtil.CheckNotNull(key, ValidationUtil.NULL_KEY_IS_NOT_ALLOWED);
+            var keyData = ToData(key);
+            var request = MapGetCodec.EncodeRequest(GetName(), keyData, ThreadUtil.GetThreadId());
+            return InvokeAsync(request, keyData, m => GetAsyncResponse(keyData, m))
+                .ContinueWith(t=>ToObject<TValue>(t.Result));
         }
 
+        protected virtual IData GetAsyncResponse(IData keyData, IClientMessage responseMessage)
+        {
+            return MapGetCodec.DecodeResponse(responseMessage).response;
+        }
+        
         public Task<TValue> PutAsync(TKey key, TValue value)
         {
             return PutAsync(key, value, -1, TimeUnit.Seconds);

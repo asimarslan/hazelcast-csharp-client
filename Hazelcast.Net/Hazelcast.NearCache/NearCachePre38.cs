@@ -69,18 +69,17 @@ namespace Hazelcast.NearCache
             HandleIMapInvalidationEvent_v1_0(key);
         }
 
-        private void RegisterInvalidateListener()
+        private void RegisterInvalidateListener2()
         {
             try
             {
-                var request =
-                    MapAddNearCacheEntryListenerCodec.EncodeRequest(Name, (int) EntryEventType.Invalidation, false);
                 DistributedEventHandler handler = message =>
                     MapAddNearCacheEntryListenerCodec.EventHandler.HandleEvent(message,
                         HandleIMapInvalidationEvent_v1_0, HandleIMapInvalidationEvent_v1_4,
                         HandleIMapBatchInvalidationEvent_v1_0, HandleIMapBatchInvalidationEvent_v1_4);
 
-                RegistrationId = Client.GetListenerService().RegisterListener(request,
+                RegistrationId = Client.GetListenerService().RegisterListener(
+                    () => MapAddNearCacheEntryListenerCodec.EncodeRequest(Name, (int) EntryEventType.Invalidation, false),
                     message => MapAddNearCacheEntryListenerCodec.DecodeResponse(message).response,
                     id => MapRemoveEntryListenerCodec.EncodeRequest(Name, id), handler);
             }

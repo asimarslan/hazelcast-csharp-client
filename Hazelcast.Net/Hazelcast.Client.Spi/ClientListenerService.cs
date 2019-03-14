@@ -66,7 +66,7 @@ namespace Hazelcast.Client.Spi
             IsSmart = client.GetClientConfig().GetNetworkConfig().IsSmartRouting();
         }
 
-        public string RegisterListener(IClientMessage registrationMessage, DecodeRegisterResponse responseDecoder,
+        public string RegisterListener(EncodeRegisterRequest encodeRegisterRequest, DecodeRegisterResponse responseDecoder,
             EncodeDeregisterRequest encodeDeregisterRequest, DistributedEventHandler eventHandler)
         {
             //This method should not be called from registrationExecutor
@@ -77,7 +77,7 @@ namespace Hazelcast.Client.Spi
             {
                 var userRegistrationId = Guid.NewGuid().ToString();
 
-                var listenerRegistration = new ListenerRegistration(userRegistrationId, registrationMessage, responseDecoder,
+                var listenerRegistration = new ListenerRegistration(userRegistrationId, encodeRegisterRequest, responseDecoder,
                     encodeDeregisterRequest, eventHandler);
 
                 _registrations.TryAdd(userRegistrationId, listenerRegistration);
@@ -181,8 +181,16 @@ namespace Hazelcast.Client.Spi
             {
                 return;
             }
+            var eventHandlerTarget = listenerRegistration.EventHandler.Target  as IListenerRegistrationAware;
+
+            if (eventHandlerTarget != null)
+            {
+                eventHandlerTarget.BeforeListenerRegister();
+            }
+
+            var registrationRequest = listenerRegistration.EncodeRegistrationRequest();
             var future = ((ClientInvocationService) _client.GetInvocationService()).InvokeListenerOnConnection(
-                listenerRegistration.RegistrationRequest, listenerRegistration.EventHandler, connection);
+                registrationRequest, listenerRegistration.EventHandler, connection);
 
             IClientMessage clientMessage;
             try
@@ -195,8 +203,13 @@ namespace Hazelcast.Client.Spi
             }
 
             var serverRegistrationId = listenerRegistration.DecodeRegisterResponse(clientMessage);
-            var correlationId = listenerRegistration.RegistrationRequest.GetCorrelationId();
+            var correlationId = registrationRequest.GetCorrelationId();
             var registration = new EventRegistration(serverRegistrationId, correlationId, connection);
+            
+            if (eventHandlerTarget != null)
+            {
+                eventHandlerTarget.OnListenerRegister();
+            }
 
             Debug.Assert(listenerRegistration.ConnectionRegistrations != null, "registrationMap should be created!");
             listenerRegistration.ConnectionRegistrations[connection] = registration;

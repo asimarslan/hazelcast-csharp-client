@@ -16,7 +16,7 @@ using Hazelcast.Client.Protocol;
 using Hazelcast.Util;
 
 #pragma warning disable CS1591
- namespace Hazelcast.Client.Spi
+namespace Hazelcast.Client.Spi
 {
     /// <summary>
     /// Client service to add/remove remote listeners.
@@ -31,7 +31,7 @@ using Hazelcast.Util;
 
         bool RemoveEventHandler(long correlationId);
 
-        string RegisterListener(IClientMessage registrationMessage, DecodeRegisterResponse responseDecoder,
+        string RegisterListener(EncodeRegisterRequest encodeRegisterRequest, DecodeRegisterResponse responseDecoder,
             EncodeDeregisterRequest encodeDeregisterRequest, DistributedEventHandler eventHandler);
 
         bool DeregisterListener(string userRegistrationId);

@@ -15,7 +15,9 @@
 using System;
 using System.Collections.Generic;
 using Hazelcast.Client;
+using Hazelcast.Client.Protocol;
 using Hazelcast.Client.Protocol.Codec;
+using Hazelcast.Client.Spi;
 using Hazelcast.Config;
 using Hazelcast.Core;
 using Hazelcast.IO.Serialization;
@@ -23,26 +25,23 @@ using Hazelcast.Util;
 
 namespace Hazelcast.NearCache
 {
-    internal class NearCache : BaseNearCache
+    internal class NearCache : BaseNearCache, IListenerRegistrationAware
     {
+        private bool _supportsRepairableNearCache;
         private RepairingHandler _repairingHandler;
+
+        private DistributedEventHandler _distributedEventHandler;
 
         public NearCache(string name, HazelcastClient client, NearCacheConfig nearCacheConfig) : base(name, client,
             nearCacheConfig)
         {
         }
 
-        public RepairingHandler RepairingHandler
-        {
-            get { return _repairingHandler; }
-        }
 
         public override void Init()
         {
             if (InvalidateOnChange)
             {
-                var localUuid = Client.GetClientClusterService().GetLocalClient().GetUuid();
-                _repairingHandler = new RepairingHandler(localUuid, this, Client.GetClientPartitionService());
                 RegisterInvalidateListener();
             }
         }
@@ -91,11 +90,7 @@ namespace Hazelcast.NearCache
             {
                 return;
             }
-            var partitionId = Client.GetClientPartitionService().GetPartitionId(newRecord.Key);
-            var metadataContainer = _repairingHandler.GetMetaDataContainer(partitionId);
-            newRecord.PartitionId = partitionId;
-            newRecord.Sequence = metadataContainer.Sequence;
-            newRecord.Guid = metadataContainer.Guid;
+            _repairingHandler.InitInvalidationMetadata(newRecord);
         }
 
 
@@ -103,21 +98,72 @@ namespace Hazelcast.NearCache
         {
             try
             {
-                var request =
-                    MapAddNearCacheInvalidationListenerCodec.EncodeRequest(Name, (int)EntryEventType.Invalidation,
-                        false);
-                DistributedEventHandler handler = message =>
-                    MapAddNearCacheInvalidationListenerCodec.EventHandler.HandleEvent(message,
-                        HandleIMapInvalidationEvent_v1_0, HandleIMapInvalidationEvent_v1_4,
-                        HandleIMapBatchInvalidationEvent_v1_0, HandleIMapBatchInvalidationEvent_v1_4);
-
-                RegistrationId = Client.GetListenerService().RegisterListener(request,
-                    message => MapAddNearCacheInvalidationListenerCodec.DecodeResponse(message).response,
-                    id => MapRemoveEntryListenerCodec.EncodeRequest(Name, id), handler);
+                RegistrationId = _clientListenerService
+                    .RegisterListener(EncodeInvalidationListener, DecodeRegisterResponse,
+                    id => MapRemoveEntryListenerCodec.EncodeRequest(Name, id), HandleListenerEvent);
             }
             catch (Exception e)
             {
                 Logger.Severe("-----------------\n Near Cache is not initialized!!! \n-----------------", e);
+            }
+        }
+
+        private string DecodeRegisterResponse(IClientMessage message)
+        {
+            var localUuid = Client.GetClientClusterService().GetLocalClient().GetUuid();
+            _repairingHandler = new RepairingHandler(localUuid, this, Client.GetClientPartitionService());
+            return MapAddNearCacheInvalidationListenerCodec.DecodeResponse(message).response;
+        }
+        
+        private IClientMessage EncodeInvalidationListener()
+        {
+            return SupportsRepairableNearCache()
+                ? MapAddNearCacheInvalidationListenerCodec.EncodeRequest(Name, (int) EntryEventType.Invalidation, false)
+                : MapAddNearCacheEntryListenerCodec.EncodeRequest(Name, (int) EntryEventType.Invalidation, false);
+        }
+        private bool SupportsRepairableNearCache()
+        {
+            var serverVersion = ((ClientClusterService) Client.GetClientClusterService()).ServerVersion;
+            return serverVersion >= VersionUtil.Version38;
+        }
+
+        private void HandleListenerEvent(IClientMessage eventMessage)
+        {
+            _distributedEventHandler(eventMessage);
+        }
+
+        void IListenerRegistrationAware.BeforeListenerRegister()
+        {
+            _supportsRepairableNearCache = SupportsRepairableNearCache();
+            
+            if (_supportsRepairableNearCache)
+            {
+                _distributedEventHandler = msg=>MapAddNearCacheInvalidationListenerCodec.EventHandler.HandleEvent(msg, 
+                    HandleIMapInvalidationEvent_v1_0, HandleIMapInvalidationEvent_v1_4, 
+                    HandleIMapBatchInvalidationEvent_v1_0, HandleIMapBatchInvalidationEvent_v1_4);
+                
+//                RepairingTask repairingTask = Client.GetRepairingTask(getServiceName());
+                _repairingHandler = repairingTask.registerAndGetHandler(_name, nearCache);
+                _repairingHandler = Client.registerAndGetHandler(_name, nearCache);
+            }
+            else 
+            {
+                _distributedEventHandler = msg=>MapAddNearCacheEntryListenerCodec.EventHandler.HandleEvent(msg,
+                    HandleIMapInvalidationEvent_v1_0, HandleIMapInvalidationEvent_v1_4,
+                    HandleIMapBatchInvalidationEvent_v1_0, HandleIMapBatchInvalidationEvent_v1_4);
+
+                Clear();
+                RepairingTask repairingTask = getContext().GetRepairingTask(getServiceName());
+                repairingTask.DeregisterHandler(_name);
+                Logger.Warning(format("Near Cache for '%s' map is started in legacy mode", _name));
+            }
+
+        }
+
+        void IListenerRegistrationAware.OnListenerRegister()
+        {
+            if (!_supportsRepairableNearCache) {
+                Clear();
             }
         }
     }

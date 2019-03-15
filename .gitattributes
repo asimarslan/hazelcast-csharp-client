@@ -4,6 +4,7 @@
 * text=auto
 *.resx text eol=crlf
 *.sln text eol=crlf
+*.sh text eol=lf
 
 ###############################################################################
 # Set default behavior for command prompt diff.

@@ -29,4 +29,9 @@
   <ItemGroup>
     <EmbeddedResource Include="Resources\*" />
   </ItemGroup>
+  <ItemGroup>
+    <Compile Include="..\Hazelcast.Net\Hazelcast.Util\DnsUtil.cs">
+      <Link>DnsUtil.cs</Link>
+    </Compile>
+  </ItemGroup>
 </Project>

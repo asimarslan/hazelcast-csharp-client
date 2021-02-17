@@ -24,20 +24,87 @@ namespace Hazelcast.DistributedObjects.Impl
 {
     internal partial class HDictionary<TKey, TValue> // Setting
     {
-        /// <inheritdoc />
+        private TimeSpan Unset = Timeout.InfiniteTimeSpan;
+            
         public Task SetAsync(TKey key, TValue value)
-            => SetAsync(key, value, TimeToLive.InfiniteTimeSpan);
+        {
+            var (keyData, valueData) = ToSafeData(key, value);
+            return SetAsyncInternal(keyData, valueData, Unset, Unset);
+        }
 
-        /// <inheritdoc />
-        public Task<TValue> GetAndSetAsync(TKey key, TValue value)
-            => GetAndSetAsync(key, value, TimeToLive.InfiniteTimeSpan);
-
-        /// <inheritdoc />
         public Task SetAsync(TKey key, TValue value, TimeSpan timeToLive)
         {
             var (keyData, valueData) = ToSafeData(key, value);
-            return SetAsync(keyData, valueData, timeToLive);
+            return SetAsyncInternal(keyData, valueData, timeToLive, Unset);
         }
+        
+       public Task SetAsync(TKey key, TValue value, TimeSpan timeToLive, TimeSpan maxIdleTime)
+        {
+            var (keyData, valueData) = ToSafeData(key, value);
+            return SetAsyncInternal(keyData, valueData, timeToLive, maxIdleTime);
+        }
+
+        protected virtual async Task SetAsyncInternal(IData keyData, IData valueData, TimeSpan timeToLive, TimeSpan maxIdleTime)
+        {
+            var timeToLiveMs = TimeInMsOrOneIfResultIsZero(timeToLive);
+            var maxIdleTimeMs = TimeInMsOrOneIfResultIsZero(maxIdleTime);
+            var requestMessage = MapSetWithMaxIdleCodec.EncodeRequest(Name, keyData, valueData, ContextId, timeToLiveMs, maxIdleTimeMs);
+            await Cluster.Messaging.SendToKeyPartitionOwnerAsync(requestMessage, keyData).CAF();
+        }
+
+        private long TimeInMsOrOneIfResultIsZero(TimeSpan time)
+        {
+            var roundedTimeInMillis = (long) time.TotalMilliseconds;
+            if (time.TotalMilliseconds > 0 && roundedTimeInMillis == 0)
+            {
+                roundedTimeInMillis = 1;
+            }
+            return roundedTimeInMillis;
+        }
+
+        private TimeSpan Unset = Timeout.InfiniteTimeSpan;
+
+        public Task<bool> TryLockAsync(TKey key)
+        {
+            return TryLockAsync(key, TimeToWait.Zero, Unset);
+        }
+
+        public Task<bool> TryLockAsync(TKey key, TimeSpan timeToWait)
+        {
+            return TryLockAsync(key, timeToWait, Unset);
+        }
+
+        //this does not exist but we can be added as an extra overload
+        public Task<bool> TryLockAsync(TKey key, TimeSpan leaseTime)
+        {
+            return TryLockAsync(key, TimeToWait.Zero, leaseTime);
+        }
+
+        public async Task<bool> TryLockAsync(TKey key, TimeSpan timeToWait, TimeSpan leaseTime)
+        {
+            var timeToWaitMs = RoundedTimeInMillis(timeToWait);
+            var leaseTimeMs = RoundedTimeInMillis(leaseTime);
+            
+            var keyData = ToSafeData(key);
+            var refId = _lockReferenceIdSequence.GetNext();
+
+            var requestMessage = MapTryLockCodec.EncodeRequest(Name, keyData, ContextId, leaseTimeMs, timeToWaitMs, refId);
+            var responseMessage = await Cluster.Messaging.SendToKeyPartitionOwnerAsync(requestMessage, keyData).CAF();
+            var response = MapTryLockCodec.DecodeResponse(responseMessage).Response;
+            return response;
+        }
+
+        private long RoundedTimeInMillis(TimeSpan time)
+        {
+            return (long) time.TotalMilliseconds;
+        }
+
+        
+        
+        
+        /// <inheritdoc />
+        public Task<TValue> GetAndSetAsync(TKey key, TValue value)
+            => GetAndSetAsync(key, value, TimeToLive.InfiniteTimeSpan);
 
         protected virtual async Task SetAsync(IData keyData, IData valueData, TimeSpan timeToLive)
         {
@@ -45,6 +112,7 @@ namespace Hazelcast.DistributedObjects.Impl
             var requestMessage = MapSetCodec.EncodeRequest(Name, keyData, valueData, ContextId, timeToLiveMs);
             await Cluster.Messaging.SendToKeyPartitionOwnerAsync(requestMessage, keyData).CAF();
         }
+
 
         /// <inheritdoc />
         public Task<TValue> GetAndSetAsync(TKey key, TValue value, TimeSpan timeToLive)

@@ -16,13 +16,13 @@ using System;
 
 namespace Hazelcast.CP
 {
-    internal sealed class RaftGroupId : IEquatable<RaftGroupId>
+    internal sealed class RaftGroupId : ICPGroupId, IEquatable<RaftGroupId>
     {
-        public RaftGroupId(string name, long seed, long commitIndex)
+        public RaftGroupId(string name, long seed, long groupId)
         {
             Name = name;
             Seed = seed;
-            Id = commitIndex;
+            Id = groupId;
         }
 
         public long Id { get; }
@@ -50,26 +50,23 @@ namespace Hazelcast.CP
             return EqualsN(left, right);
         }
 
-        public override int GetHashCode()
-        {
-            unchecked
-            {
-                var hashCode = Id.GetHashCode();
-                hashCode = (hashCode * 397) ^ Seed.GetHashCode();
-                hashCode = (hashCode * 397) ^ (Name != null ? Name.GetHashCode(StringComparison.Ordinal) : 0);
-                return hashCode;
-            }
-        }
-
-        public static bool operator ==(RaftGroupId left, RaftGroupId right) => Equals(left, right);
-
-        public static bool operator !=(RaftGroupId left, RaftGroupId right) => !Equals(left, right);
-
         private static bool EqualsN(RaftGroupId left, RaftGroupId right)
             => left.Id == right.Id &&
                left.Seed == right.Seed &&
                left.Name == right.Name;
 
-        public override string ToString() => $"{nameof(Id)}: {Id}, {nameof(Seed)}: {Seed}, {nameof(Name)}: {Name}";
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                //name is not null
+                var hashCode = Name.GetHashCode(StringComparison.Ordinal);
+                hashCode = (hashCode * 31) ^ Seed.GetHashCode();
+                hashCode = (hashCode * 31) ^ Id.GetHashCode();
+                return hashCode;
+            }
+        }
+
+        public override string ToString() => $"ICPGroupId(Name={Name}, Seed={Seed}, GroupId={Id})";
     }
 }

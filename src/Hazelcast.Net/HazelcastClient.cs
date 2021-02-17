@@ -17,6 +17,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Hazelcast.Clustering;
 using Hazelcast.Core;
+using Hazelcast.CP;
 using Hazelcast.DistributedObjects;
 using Hazelcast.NearCaching;
 using Hazelcast.Serialization;
@@ -32,6 +33,7 @@ namespace Hazelcast
         private readonly HazelcastOptions _options;
         private readonly DistributedObjectFactory _distributedObjectFactory;
         private readonly NearCacheManager _nearCacheManager;
+        private readonly CPSessionManager _CPSessionManager;
         private readonly ILoggerFactory _loggerFactory;
         private readonly ILogger _logger;
 
@@ -56,6 +58,9 @@ namespace Hazelcast
             Cluster.Connections.OnConnectingToNewCluster = cancellationToken => _distributedObjectFactory.CreateAllAsync(cancellationToken);
 
             _nearCacheManager = new NearCacheManager(cluster, serializationService, loggerFactory, options.NearCache);
+
+            _CPSessionManager = new CPSessionManager(Cluster);
+            CPSubsystem = new CPSubsystem(_distributedObjectFactory, _CPSessionManager);
 
             // wire events
             // this way, the cluster does not need to know about the hazelcast client,
@@ -96,6 +101,9 @@ namespace Hazelcast
         public ISerializationService SerializationService { get; }
 
         /// <inheritdoc />
+        public ICPSubsystem CPSubsystem { get; }
+
+        /// <inheritdoc />
         public
 #if !HZ_OPTIMIZE_ASYNC
         async
@@ -124,6 +132,7 @@ namespace Hazelcast
 #endif
         Task StartAsync(CancellationToken cancellationToken)
         {
+            
             var task = Cluster.Connections.ConnectAsync(cancellationToken);
 
 #if HZ_OPTIMIZE_ASYNC
@@ -142,6 +151,15 @@ namespace Hazelcast
             // order is important,
             // don't dispose the cluster before the rest!
 
+            try
+            {
+                _CPSessionManager.DisposeAsync().CAF();
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, "Caught exception while disposing the cp session manager.");
+            }
+            
             try
             {
                 await _nearCacheManager.DisposeAsync().CAF();

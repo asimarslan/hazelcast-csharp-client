@@ -33,12 +33,7 @@ namespace Hazelcast.Clustering
         /// Gets the client name.
         /// </summary>
         string ClientName { get; }
-
-        /// <summary>
-        /// Gets the client name prefix.
-        /// </summary>
-        string ClientNamePrefix { get; }
-
+        
         /// <summary>
         /// Gets the client labels.
         /// </summary>

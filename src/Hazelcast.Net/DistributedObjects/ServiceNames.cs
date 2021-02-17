@@ -58,5 +58,31 @@ namespace Hazelcast.DistributedObjects
         /// The name of the set service.
         /// </summary>
         public const string Set = "hz:impl:setService";
+
+        /// <summary>
+        /// The name of the CP atomic long service.
+        /// </summary>
+        public const string AtomicLong = "hz:raft:atomicLongService";
+
+        /// <summary>
+        /// The name of the CP atomic reference service.
+        /// </summary>
+        public const string AtomicReference = "hz:raft:atomicRefService";
+
+        /// <summary>
+        /// The name of the CP fenced lock service.
+        /// </summary>
+        public const string FencedLock = "hz:raft:lockService";
+
+        /// <summary>
+        /// The name of the CP count down latch service.
+        /// </summary>
+        public const string CountDownLatch = "hz:raft:countDownLatchService";
+
+        /// <summary>
+        /// The name of the CP semaphore service.
+        /// </summary>
+        public const string Semaphore = "hz:raft:semaphoreService";
+
     }
 }

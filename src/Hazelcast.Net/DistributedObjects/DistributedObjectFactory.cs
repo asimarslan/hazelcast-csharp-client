@@ -19,6 +19,7 @@ using System.Threading.Tasks;
 using System.Xml;
 using Hazelcast.Clustering;
 using Hazelcast.Core;
+using Hazelcast.CP;
 using Hazelcast.Data;
 using Hazelcast.Exceptions;
 using Hazelcast.Protocol.Codecs;
@@ -30,7 +31,7 @@ namespace Hazelcast.DistributedObjects
     /// <summary>
     /// Represents a factory that creates <see cref="IDistributedObject"/> instances.
     /// </summary>
-    internal class DistributedObjectFactory : IAsyncDisposable
+    internal partial class DistributedObjectFactory : IAsyncDisposable
     {
         private readonly ConcurrentAsyncDictionary<DistributedObjectKey, DistributedObjectBase> _objects
             = new ConcurrentAsyncDictionary<DistributedObjectKey, DistributedObjectBase>();

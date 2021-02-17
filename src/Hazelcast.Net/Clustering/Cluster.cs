@@ -25,6 +25,8 @@ namespace Hazelcast.Clustering
 {
     internal class Cluster : IAsyncDisposable
     {
+        private const string ClientNamePrefix = "hz.client_";
+        
         // generates unique cluster identifiers
         private static readonly ISequence<int> ClusterIdSequence = new Int32Sequence();
 
@@ -61,7 +63,7 @@ namespace Hazelcast.Clustering
             var loadBalancer = options.LoadBalancing.LoadBalancer.Service ?? new RoundRobinLoadBalancer();
 
             var clientName = string.IsNullOrWhiteSpace(options.ClientName)
-                ? options.ClientNamePrefix + ClusterIdSequence.GetNext()
+                ? ClientNamePrefix + ClusterIdSequence.GetNext()
                 : options.ClientName;
 
             var clusterName = string.IsNullOrWhiteSpace(options.ClusterName) ? "dev" : options.ClusterName;
@@ -149,6 +151,8 @@ namespace Hazelcast.Clustering
         /// Gets the partitioner.
         /// </summary>
         public Partitioner Partitioner { get; }
+
+        public string ClientName => _clusterState.ClientName;
 
         /// <summary>
         /// Throws if the cluster is disconnected (wait if it is connecting).

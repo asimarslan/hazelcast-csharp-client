@@ -15,6 +15,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Hazelcast.CP;
 using Hazelcast.DistributedObjects;
 using Hazelcast.Exceptions;
 using Hazelcast.Transactions;
@@ -26,6 +27,9 @@ namespace Hazelcast
     /// </summary>
     public interface IHazelcastClient : IAsyncDisposable
     {
+        // ReSharper disable once InconsistentNaming
+        ICPSubsystem CPSubsystem { get; }
+
         /// <summary>
         /// Starts the client by connecting to the remote cluster.
         /// </summary>
